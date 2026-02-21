@@ -1,7 +1,38 @@
 import argparse
 from pathlib import Path
-from rich.console import Console
-from rich.table import Table
+
+try:
+    from rich.console import Console
+    from rich.table import Table
+except Exception:
+    class Console:
+        def print(self, *args, **kwargs):
+            sep = kwargs.get('sep', ' ')
+            end = kwargs.get('end', '\n')
+            # simple stringify handling for objects
+            out = sep.join(str(a) for a in args)
+            print(out, end=end)
+
+    class Table:
+        def __init__(self, title: str | None = None):
+            self.title = title
+            self._cols: list[str] = []
+            self._rows: list[tuple] = []
+
+        def add_column(self, name: str):
+            self._cols.append(name)
+
+        def add_row(self, *cols):
+            self._rows.append(cols)
+
+        def __str__(self) -> str:
+            lines: list[str] = []
+            if self.title:
+                lines.append(self.title)
+                lines.append('=' * len(self.title))
+            for r in self._rows:
+                lines.append(' | '.join(str(c) for c in r))
+            return '\n'.join(lines)
 
 from vsh.core.config import VSHConfig
 from vsh.core.models import ScanResult

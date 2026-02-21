@@ -1,38 +1,41 @@
-from pydantic import BaseModel, Field
+from dataclasses import dataclass, field
 from typing import Literal, Optional, Any
 
 Severity = Literal["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
 
-class Finding(BaseModel):
+@dataclass
+class Finding:
     id: str
     title: str
     severity: Severity
     cwe: Optional[str] = None
     cvss: Optional[float] = None
     cve: Optional[str] = None
-    file: str
-    line: int
+    file: str = ""
+    line: int = 1
     column: int = 1
-    message: str
+    message: str = ""
     evidence: Optional[str] = None
     recommendation: Optional[str] = None
     reachability: Optional[Literal["YES","NO","UNKNOWN"]] = "UNKNOWN"
-    references: list[str] = Field(default_factory=list)
-    meta: dict[str, Any] = Field(default_factory=dict)
+    references: list[str] = field(default_factory=list)
+    meta: dict[str, Any] = field(default_factory=dict)
 
-class DependencyVuln(BaseModel):
+@dataclass
+class DependencyVuln:
     ecosystem: str  # PyPI, npm
     name: str
-    version: str | None = None
-    vuln_id: str | None = None
-    summary: str | None = None
+    version: Optional[str] = None
+    vuln_id: Optional[str] = None
+    summary: Optional[str] = None
     severity: Severity = "MEDIUM"
-    references: list[str] = Field(default_factory=list)
+    references: list[str] = field(default_factory=list)
 
-class ScanResult(BaseModel):
+@dataclass
+class ScanResult:
     project: str
-    findings: list[Finding] = Field(default_factory=list)
-    dep_vulns: list[DependencyVuln] = Field(default_factory=list)
-    hallucinated_packages: list[str] = Field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
+    dep_vulns: list[DependencyVuln] = field(default_factory=list)
+    hallucinated_packages: list[str] = field(default_factory=list)
     score: int = 100
-    notes: list[str] = Field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
