@@ -333,6 +333,39 @@ vsh demo_targets --out vsh_out_with_requirements --no-syft --lang python
 
 이번 리포트에서는 `vsh/demo_targets/requirements.txt` 를 생성해 SBOM fallback을 사용하여 `vsh_out_req_scan/VSH_REPORT.md` 를 만들었습니다.
 
+### SBOM 상세(알고리즘 및 버전 수집 방식)
+
+VSH의 SBOM 생성은 단계적(fallback) 알고리즘으로 동작합니다:
+
+1. syft 실행(우선)
+   - 외부 바이너리 `syft`를 실행해 JSON 출력을 파싱합니다.
+   - syft 출력의 각 `artifact`에서 `name`, `version`, `purl` 등을 읽어 패키지와 버전을 결정합니다. `purl`에 `pypi`나 `npm` 문자열이 포함되어 있으면 생태계(`PyPI`/`npm`)를 판단합니다.
+
+2. syft 미사용 또는 실패 시 (fallback)
+   - `requirements.txt`가 존재하면 각 라인을 파싱합니다.
+     - `==`로 고정된 항목(`name==1.2.3`)은 그대로 `name`과 `version`을 기록합니다.
+     - 버전이 명시되지 않은 항목은 `version: null`로 기록합니다.
+   - `package-lock.json`이 존재하면 잠금파일의 `packages` 또는 `dependencies`에서 패키지 이름과 `version`을 추출합니다.
+
+3. 아무 것도 없으면 빈 SBOM(`{"source":"none","packages":[]}`)
+
+버전 정보 출처 요약:
+- `syft`: 설치된/분석된 아티팩트 메타데이터에서 직접 추출 (가장 신뢰도 높음)
+- `requirements.txt`: 파일에 명시된 버전(또는 `pip freeze`로 생성된 결과)
+- `package-lock.json`: 잠금파일에 기록된 `version`
+
+이번 저장소에서 생성된 SBOM 예시:
+- 파일 위치: `vsh_out_req_scan/sbom.json`
+- 출처: `requirements.txt` fallback
+- 포함 패키지 수: 126 (예시값)
+
+한계 및 권장 사항:
+- `pip freeze`로 만든 `requirements.txt`는 실행 환경에 설치된 모든 패키지를 덤프하므로 프로젝트에 필요한 최소 의존성만 포함하지 않을 수 있습니다. (SBOM이 과다해질 수 있음)
+- 정확한 SBOM이 필요하면 프로젝트 전용 가상환경에서 `syft`로 생성하거나, 프로젝트의 잠금파일을 정확히 관리하세요.
+- CI에서 안정적으로 SBOM을 생성하려면 워크플로에서 가상환경을 만들고(deps 설치 후) `syft`를 실행하는 것이 좋습니다.
+
+추가: SBOM을 CycloneDX 또는 SPDX 포맷으로 변환해서 저장/업로드할 수 있도록 향후 기능을 고려하고 있습니다.
+
 ## .gitignore 권장 항목
 
 프로젝트에 불필요한 아티팩트(.venv, vsh_out 등)가 포함되지 않도록 아래 항목들을 `.gitignore`에 추가하시길 권장합니다:
