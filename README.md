@@ -285,6 +285,66 @@ docker-compose up
 
 ---
 
+## ⚠️ Codespaces / 컨테이너 환경 주의 및 설치 팁
+
+GitHub Codespaces(또는 일부 컨테이너 기반 개발환경)는 시스템 Python을 배포 패키지 관리자(apt)로 관리하고 PEP 668 정책을 적용합니다. 이로 인해 다음과 같은 제약이 있습니다:
+
+- `pip install`이 시스템 site-packages에 바로 쓰기를 차단할 수 있습니다 ("externally-managed-environment").
+- 컨테이너 이미지에 `python3-venv`/`ensurepip`가 없어 `python -m venv`가 실패할 수 있습니다.
+
+해결/권장 방법:
+
+- 권장(로컬/권한 있는 환경): 가상환경 생성 후 설치
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+pip install semgrep
+```
+
+- Codespaces에서 권한이 제한될 때(임시 대안): 사용자 설치 또는 --break-system-packages 사용
+
+```bash
+python3 -m pip install --break-system-packages -e . rich pydantic pyyaml requests tqdm pytest
+# 또는 컨테이너 이미지에 python3-venv 패키지를 추가하여 venv 생성 가능하도록 구성
+```
+
+참고: 가능한 경우 DevContainer 정의나 CI 워크플로에서 `python3-venv`를 미리 설치하도록 설정하는 게 가장 안정적입니다.
+
+## 🧾 SBOM(소프트웨어 구성 정보) 생성
+
+VSH는 SBOM 생성을 위해 기본적으로 `syft`를 사용합니다. syft가 없으면 `requirements.txt` 또는 `package-lock.json`을 fallback으로 사용합니다.
+
+- syft 사용 예:
+
+```bash
+# syft가 설치되어 있을 때
+vsh <project> --out results --lang python
+```
+
+- fallback(Requirements) 사용 예 (빠른 대체 방법):
+
+```bash
+# 현재 환경 패키지를 requirements.txt로 만들고 스캔
+python -m pip freeze > demo_targets/requirements.txt
+vsh demo_targets --out vsh_out_with_requirements --no-syft --lang python
+```
+
+이번 리포트에서는 `vsh/demo_targets/requirements.txt` 를 생성해 SBOM fallback을 사용하여 `vsh_out_req_scan/VSH_REPORT.md` 를 만들었습니다.
+
+## .gitignore 권장 항목
+
+프로젝트에 불필요한 아티팩트(.venv, vsh_out 등)가 포함되지 않도록 아래 항목들을 `.gitignore`에 추가하시길 권장합니다:
+
+```
+.venv/
+vsh_out*
+vsh_out_test_*
+*.pyc
+__pycache__/
+```
+
 ## 📞 문의 & 기여
 
 - 이슈: [GitHub Issues](https://github.com/your-repo/issues)
