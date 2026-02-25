@@ -1,0 +1,9 @@
+[
+  {
+    "issue_id": "issue-001",
+    "file_path": "test.py",
+    "cwe_id": "CWE-78",
+    "severity": "HIGH",
+    "status": "accepted"
+  }
+]

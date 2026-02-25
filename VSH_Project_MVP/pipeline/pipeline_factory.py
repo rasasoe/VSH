@@ -1,0 +1,2 @@
+class PipelineFactory:
+    pass

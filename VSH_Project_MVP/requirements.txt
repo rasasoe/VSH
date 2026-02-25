@@ -1,0 +1,8 @@
+fastmcp
+anthropic
+semgrep
+fastapi
+uvicorn
+tree-sitter
+tree-sitter-python
+python-dotenv
