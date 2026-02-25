@@ -44,3 +44,21 @@ class MockFixRepo(BaseReadRepository):
             print(f"[ERROR] Unexpected error accessing Fix DB: {e}")
             
         return None
+
+    def find_all(self) -> List[Dict]:
+        """
+        kisa_fix.json의 전체 목록을 조회합니다.
+
+        Returns:
+            List[Dict]: 전체 수정 템플릿 목록. 없으면 빈 리스트.
+        """
+        if not os.path.exists(FIX_PATH):
+            return []
+
+        try:
+            with open(FIX_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data if isinstance(data, list) else []
+        except Exception as e:
+            print(f"[ERROR] Failed to read Fix DB: {e}")
+            return []

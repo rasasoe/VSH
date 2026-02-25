@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 class BaseReadRepository(ABC):
     """
@@ -19,10 +19,20 @@ class BaseReadRepository(ABC):
         """
         pass
 
+    @abstractmethod
+    def find_all(self) -> List[Dict]:
+        """
+        저장소의 전체 목록을 조회합니다.
+
+        Returns:
+            List[Dict]: 전체 항목 목록. 없으면 빈 리스트 반환.
+        """
+        pass
+
 class BaseWriteRepository(BaseReadRepository):
     """
     읽기 및 쓰기가 가능한 저장소를 위한 추상 기본 클래스.
-    BaseReadRepository를 상속받아 find_by_id 메서드를 포함합니다.
+    BaseReadRepository를 상속받아 find_by_id, find_all 메서드를 포함합니다.
     """
 
     @abstractmethod

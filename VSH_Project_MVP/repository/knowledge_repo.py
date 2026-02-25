@@ -44,3 +44,21 @@ class MockKnowledgeRepo(BaseReadRepository):
             print(f"[ERROR] Unexpected error accessing Knowledge DB: {e}")
         
         return None
+
+    def find_all(self) -> List[Dict]:
+        """
+        knowledge.json의 전체 목록을 조회합니다.
+
+        Returns:
+            List[Dict]: 전체 지식(패턴) 목록. 없으면 빈 리스트.
+        """
+        if not os.path.exists(KNOWLEDGE_PATH):
+            return []
+
+        try:
+            with open(KNOWLEDGE_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data if isinstance(data, list) else []
+        except Exception as e:
+            print(f"[ERROR] Failed to read Knowledge DB: {e}")
+            return []

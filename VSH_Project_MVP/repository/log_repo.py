@@ -52,6 +52,15 @@ class MockLogRepo(BaseWriteRepository):
                 return item
         return None
 
+    def find_all(self) -> List[Dict]:
+        """
+        log.json의 전체 목록을 조회합니다.
+
+        Returns:
+            List[Dict]: 전체 로그 목록. 없으면 빈 리스트.
+        """
+        return self._load_data()
+
     def save(self, data: Dict) -> bool:
         """
         분석 결과를 log.json에 추가합니다.
@@ -64,9 +73,6 @@ class MockLogRepo(BaseWriteRepository):
         """
         logs = self._load_data()
         
-        # 중복 방지 로직 (선택 사항, 여기서는 단순 append)
-        # 만약 issue_id가 이미 있다면? -> 덮어쓰기 or 무시? 
-        # MVP에서는 일단 추가하는 것으로 가정하지만, 중복 ID 체크를 추가하는 것이 안전함.
         existing_idx = next((i for i, item in enumerate(logs) if item.get("issue_id") == data.get("issue_id")), -1)
         
         if existing_idx != -1:
