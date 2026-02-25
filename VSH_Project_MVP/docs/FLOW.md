@@ -50,16 +50,26 @@ Repository 레이어는 상위 레이어가 데이터의 물리적 저장소에 
 
 ---
 
-## L1 Detection Flow (Step 3)
+## Entire L1 → L2 Pipeline Flow (Step 5)
 
-보안 스캔은 세 가지 서로 다른 계층에서 동시에 진행됩니다.
+이 흐름은 `AnalysisPipeline.run(file_path)` 호출 시 내부적으로 오케스트레이션 되는 전체 과정입니다.
 
-1. **입력**: 소스 파일 경로 (`.py`)
-2. **실행**:
-   - **SemgrepScanner**: 파일 라인별 문자열 패턴 매칭 → `ScanResult`
-   - **TreeSitterScanner**: AST 파싱 후 함수 호출 노드 정규식 매칭 → `ScanResult`
-   - **SBOMScanner**: 루트의 `requirements.txt` 내 취약 패키지 대조 → `ScanResult`
-3. **통합**: 각 스캐너는 독립적인 `ScanResult` 객체를 반환하며, 이는 나중에 `Pipeline` 레이어에서 하나로 통합(merge)됩니다 (Step 5 구현 예정).
+1. **입력 수신**: `file_path` 문자열
+2. **L1 스캔 (탐지)**: 
+   - 주입된 3개의 스캐너(`Semgrep`, `TreeSitter`, `SBOM`)를 차례대로 실행하여 각각의 `ScanResult` 반환. (언어 미지원 등 예외 발생 시 `WARN` 로그만 남기고 스킵)
+3. **통합 및 중복 제거**:
+   - 수집된 모든 `findings` 통합.
+   - `_deduplicate()` 메서드(`cwe_id` + `line_number` 기준)로 중복된 취약점 제거.
+4. **분석 분기**:
+   - 중복 제거된 findings로 통합 `ScanResult` 생성.
+   - 결과가 안전하다면(`is_clean == True`), 빈 결과 dict 반환 후 종료.
+5. **L2 분석 (심층 분석 및 수정 제안)**:
+   - `knowledge_repo.find_all()`과 `fix_repo.find_all()`을 통해 전체 데이터를 가져옴.
+   - `analyzer.analyze()` 호출 (LLM API 1회 통합 호출 수행).
+6. **로깅 및 상태 추적**:
+   - Analyzer가 반환한 `fix_suggestions`를 순회하며 `LogRepo`에 초기 상태(`status="pending"`)와 함께 상세 정보(`severity`, `code_snippet` 등) 저장.
+7. **출력 반환**:
+   - `scan_results`와 `fix_suggestions` 객체들을 JSON으로 직렬화할 수 있는 `dict` 리스트 형태로 변환하여 최종 반환.
 
 ### Real Semgrep 교체 전략 (Migration)
 나중에 Windows 환경이 아닌 곳에서 실제 Semgrep을 사용할 경우:

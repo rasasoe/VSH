@@ -1,6 +1,6 @@
 # PROGRESS.md — 개발 진행 상태
 
-## 현재 단계: Step 5 준비 중
+## 현재 단계: Step 6 준비 중
 
 ---
 
@@ -13,7 +13,7 @@
 | 2 | Repository + Mock DB | 완료 | 260225 |
 | 3 | Scanner (L1) | 완료 | 260225 |
 | 4 | Analyzer (L2) | 완료 | 260225 |
-| 5 | Pipeline | 대기 | - |
+| 5 | Pipeline | 완료 | 260225 |
 | 6 | MCP 툴 등록 | 대기 | - |
 | 7 | Dashboard | 대기 | - |
 | 8 | E2E 테스트 | 대기 | - |
@@ -49,9 +49,9 @@
 - [x] 수정 제안 코드 생성 확인
 
 ### Step 5 — Pipeline
-- [ ] 취약한 파일 → L1 → L2 흐름 정상 실행
-- [ ] 아무것도 없는 파일 → clean 반환 확인
-- [ ] PipelineFactory 인스턴스 생성 확인
+- [x] 취약한 파일 → L1 → L2 흐름 정상 실행
+- [x] 아무것도 없는 파일 → clean 반환 확인
+- [x] PipelineFactory 인스턴스 생성 확인
 
 ### Step 6 — MCP 툴 등록
 - [ ] mcp_server.py 실행 오류 없음
@@ -97,4 +97,9 @@
 | 260225 | [결정] 현재 기본값: LLM_PROVIDER=gemini, 추후 claude로 값만 변경 시 교체 완료 |
 | 260225 | [이슈] Gemini 모델: gemini-2.5-flash 사용 (gemini-1.5-pro 지정 시 라이브러리 자동 처리 문제) |
 | 260225 | [이슈] google-generativeai 지원 종료 경고 발생 → 추후 google-genai 패키지로 마이그레이션 필요 |
-| 260225 | 다음 단계: Step 5 (Pipeline 구현) |
+| 260225 | Step 5 완료: Pipeline Layer 구현 (Orchestration 흐름 완성) |
+| 260225 | [결정] 중복 탐지 문제 해결: `_deduplicate()`를 `@staticmethod`로 선언하여 `cwe_id` + `line_number` 기준으로 중복 제거 |
+| 260225 | [결정] run() 반환 타입: 모든 값을 직렬화 가능한 dict 및 리스트 구조로 반환 (도메인 모델 객체 직접 반환 금지) |
+| 260225 | [결정] PipelineFactory 의존성 조립: 파이프라인 생성 시 필요한 모든 의존성(Scanner, Analyzer, Repo)을 외부에서 생성 후 주입 (DI 패턴 적용) |
+| 260225 | [결정] LogRepo 저장 형식: `issue_id`, `file_path`, `cwe_id`, `severity`, `line_number`, `code_snippet`, `status("pending")` 포함 확정 |
+| 260225 | 다음 단계: Step 6 (MCP 툴 등록) |

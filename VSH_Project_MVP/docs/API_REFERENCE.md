@@ -105,3 +105,29 @@ AST(Abstract Syntax Tree) 구문 분석 기반 스캐너입니다.
 - **Version Logic**: `packaging.version` 모듈을 사용하여 의미론적 버전 비교를 수행합니다.
 
 **참고**: `modules/__init__.py`에서 `MockSemgrepScanner`는 `SemgrepScanner`라는 이름으로 export됩니다. 이는 상위 레이어인 Pipeline이 구현 세부 사항(Mock 여부)에 의존하지 않도록 하기 위함입니다.
+
+---
+
+## Pipeline Layer (pipeline/)
+
+### BasePipeline (Abstract)
+파이프라인의 기본 동작을 정의하는 인터페이스.
+- `run(file_path: str) -> dict`: 단일 파일에 대한 보안 분석 파이프라인 전체를 실행합니다.
+
+### AnalysisPipeline
+실제 분석 흐름을 오케스트레이션하는 클래스입니다. 생성자를 통해 스캐너, 분석기, 레포지토리를 주입받습니다.
+- **Method**: `run(file_path: str) -> dict`
+  - **인자**: 스캔 대상 파일 경로
+  - **반환값**: `file_path`, `scan_results` (dict list), `fix_suggestions` (dict list), `is_clean` (bool) 키를 포함하는 직렬화 가능한 딕셔너리.
+  - **전체 흐름**: Scanner 병렬 실행 -> 중복 제거 -> (취약점 발견 시) DB 조회 및 Analyzer 실행 -> (위협 판정 시) LogRepo에 저장 -> 최종 JSON 직렬화 포맷 반환.
+- **Method**: `_deduplicate(findings: List[Vulnerability]) -> List[Vulnerability]`
+  - `@staticmethod`로 선언.
+  - `cwe_id`와 `line_number` 조합을 고유 키로 사용하여 여러 스캐너의 중복된 탐지 결과를 제거합니다.
+
+### PipelineFactory
+파이프라인의 모든 의존성을 생성하고 조립하는 역할을 합니다.
+- **Method**: `create() -> BasePipeline`
+  - 싱글톤 형태의 `Mock Repo`들(Knowledge, Fix, Log)을 생성.
+  - 3종의 스캐너(`Semgrep`, `TreeSitter`, `SBOM`) 초기화.
+  - `.env`의 `LLM_PROVIDER` 값을 읽어 적절한 `Analyzer` 인스턴스 생성 및 `api_key` 검증 (누락 시 `ValueError`).
+  - 생성된 모든 의존성을 `AnalysisPipeline`에 주입하여 반환.

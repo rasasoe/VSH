@@ -5,5 +5,32 @@
     "cwe_id": "CWE-78",
     "severity": "HIGH",
     "status": "accepted"
+  },
+  {
+    "issue_id": "test_vuln.py_CWE-78_5",
+    "file_path": "test_vuln.py",
+    "cwe_id": "CWE-78",
+    "severity": "HIGH",
+    "line_number": 5,
+    "code_snippet": "subprocess.run(user_input, shell=True)",
+    "status": "pending"
+  },
+  {
+    "issue_id": "test_vuln.py_CWE-829_1",
+    "file_path": "test_vuln.py",
+    "cwe_id": "CWE-829",
+    "severity": "HIGH",
+    "line_number": 1,
+    "code_snippet": "requests==2.9.0",
+    "status": "pending"
+  },
+  {
+    "issue_id": "test_clean.py_CWE-829_1",
+    "file_path": "test_clean.py",
+    "cwe_id": "CWE-829",
+    "severity": "HIGH",
+    "line_number": 1,
+    "code_snippet": "requests==2.9.0",
+    "status": "pending"
   }
 ]

@@ -43,6 +43,8 @@
 ### Environment Variables (.env)
 - `LOG_PATH`: 분석 결과 로그가 저장되는 JSON 파일 경로 (기본값: `mock_db/log.json`)
 - `ANTHROPIC_API_KEY`: Claude API 연동을 위한 키
+- `GEMINI_API_KEY`: Gemini API 연동을 위한 키
+- `LLM_PROVIDER`: 사용할 Analyzer 지정 (`gemini` 또는 `claude`, 기본값 `gemini`)
 - `DASHBOARD_PORT`: 대시보드 서버 포트 (기본값: 3000)
 
 ---
@@ -63,3 +65,28 @@ SBOMScanner에서 대조하는 취약 패키지 DB 구조입니다.
 ### SBOM 탐지 예시 (Vulnerability 필드)
 - `cwe_id`: "CWE-829" (Inclusion of Functionality from Untrusted Control Sphere)
 - `severity`: "HIGH"
+
+---
+
+## Pipeline & Orchestration
+
+### Pipeline 반환 Dict 구조
+`Pipeline.run()` 호출 시 MCP 툴과 Dashboard가 바로 사용할 수 있도록 직렬화된 딕셔너리 구조를 반환합니다.
+- `file_path` (str): 스캔한 파일의 절대/상대 경로.
+- `scan_results` (list): 발견된 전체 취약점 (중복 제거됨, `Vulnerability` 객체의 필드를 dict로 변환).
+- `fix_suggestions` (list): AI가 실제 위협으로 판단하고 수정안을 제공한 내역 (`FixSuggestion` 객체의 필드를 dict로 변환).
+- `is_clean` (bool): `scan_results`가 비어있으면 `True`.
+
+### LogRepo 저장 데이터 구조
+분석이 끝나고 `LogRepo`에 저장(또는 덮어쓰기)되는 각 항목의 구조입니다. Dashboard 표시에 필요한 정보가 모두 포함됩니다.
+- `issue_id`: 고유 ID (`{file_path}_{cwe_id}_{line_number}`)
+- `file_path`: 대상 파일
+- `cwe_id`: 취약점 고유 번호
+- `severity`: "HIGH", "MEDIUM", "LOW"
+- `line_number`: 코드 라인 번호
+- `code_snippet`: 취약점이 의심되는 원본 코드 라인
+- `status`: 현재 상태 (`pending`)
+
+### 중복 제거(Deduplication) 기준
+파이프라인 내부에서 `TreeSitterScanner`와 `SemgrepScanner`의 탐지 결과 중복을 막기 위해 사용되는 고유 식별 조합:
+- **기준**: `cwe_id` + `line_number`
