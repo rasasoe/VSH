@@ -73,6 +73,7 @@ Post-MVP: C, JSON, JavaScript (Tree-sitter 파서 추가로 확장)
 - VS Code Extension
 - 다중 파일 / 프로젝트 단위 스캔
 - CI/CD 파이프라인 연동
+- diff 형태도 고려
 
 ### Post-MVP Phase 계획
 - Phase 2: L3 추가 (SonarQube, PoC, 리포트)
