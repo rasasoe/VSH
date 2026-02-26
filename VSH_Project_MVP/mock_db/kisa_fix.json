@@ -27,4 +27,10 @@
     "vulnerable": "pickle.loads(user_data)",
     "safe": "json.loads(user_data)",
     "description": "pickle 대신 json 사용하여 역직렬화 취약점 방지"
+  },
+  {
+    "id": "CWE-798",
+    "vulnerable": "SECRET_KEY = 'mysecretkey123'",
+    "safe": "import os\\nSECRET_KEY = os.environ.get('SECRET_KEY')",
+    "description": "하드코딩된 비밀키 대신 환경변수에서 로드"
   }]

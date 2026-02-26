@@ -43,7 +43,7 @@ async def get_logs():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/logs/{issue_id}/accept")
+@app.post("/api/logs/{issue_id:path}/accept")
 async def accept_issue(issue_id: str):
     """
     특정 취약점의 상태를 'accepted'로 업데이트합니다.
@@ -71,7 +71,7 @@ async def accept_issue(issue_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/logs/{issue_id}/dismiss")
+@app.post("/api/logs/{issue_id:path}/dismiss")
 async def dismiss_issue(issue_id: str):
     """
     특정 취약점의 상태를 'dismissed'로 업데이트합니다.

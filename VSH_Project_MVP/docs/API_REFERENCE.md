@@ -128,31 +128,28 @@ FastAPI를 통해 개발자가 브라우저에서 분석 결과를 리뷰하고 
 
 ### `GET /api/logs`
 - **설명**: `log.json`에 저장된 모든 보안 진단 이력을 조회합니다.
-- **반환 구조**:
-  ```json
-  {
-    "logs": [
-      {
-        "issue_id": "...",
-        "cwe_id": "...",
-        "severity": "...",
-        "original_code": "...",
-        "fixed_code": "...",
-        "status": "pending/accepted/dismissed",
-        "...": "..."
-      }
-    ],
-    "total": 10
-  }
-  ```
 
 ### `POST /api/logs/{issue_id}/accept`
 - **설명**: 사용자가 수정을 승인했음을 표시하고 AI 제안 코드를 반환합니다.
-- **처리**: `LogRepo` 상태를 `accepted`로 변경.
-- **반환**: `{"issue_id": "...", "status": "accepted", "fixed_code": "...", "message": "..."}`
-- **에러**: ID가 없으면 404, 시스템 오류 시 500 반환.
 
-### `POST /api/logs/{issue_id}/dismiss`
-- **설명**: 사용자가 해당 이슈를 오탐으로 판단하여 무시했음을 표시합니다.
-- **처리**: `LogRepo` 상태를 `dismissed`로 변경.
-- **반환**: `{"issue_id": "...", "status": "dismissed", "message": "..."}`
+---
+
+## E2E Testing (tests/test_e2e.py)
+
+전체 시스템의 정합성을 검증하기 위한 자동화된 테스트 세트입니다.
+
+### 테스트 실행 방법
+Dashboard 서버가 실행 중이어야 합니다 (`uvicorn dashboard.app:app --port 3000`).
+```bash
+python -m pytest tests/test_e2e.py -v
+```
+
+### 테스트 시나리오
+1. **취약 파일 스캔 (`test_e2e_scan_vulnerable_file`)**: `e2e_target.py` 스캔 시 CWE-89, CWE-798이 정확히 탐지되는지 검증.
+2. **Dashboard API (`test_e2e_dashboard_api`)**: `/api/logs` 조회 및 `accept/dismiss` 호출 시 상태 변경 및 `fixed_code` 반환 여부 검증.
+3. **수정 파일 재스캔 (`test_e2e_rescan_fixed_file`)**: `e2e_target_fixed.py` 스캔 시 핵심 취약점이 더 이상 탐지되지 않는지 검증.
+4. **로그 이력 (`test_e2e_log_history`)**: `log.json`에 모든 필드(`original_code`, `fixed_code` 등)가 올바르게 저장되는지 검증.
+
+### 주의사항
+- **SBOMScanner 특성**: 프로젝트 루트의 `requirements.txt`를 항상 스캔하므로, 개별 파일이 깨끗해도 전체 `is_clean`은 `False`일 수 있습니다. 재스캔 검증 시 특정 CWE ID의 존재 여부로 판단해야 합니다.
+- **Library 마이그레이션**: 현재 `google-generativeai`를 사용 중이나 이미 지원 종료되었습니다. `GeminiAnalyzer` 단일 파일만 `google-genai` 패키지로 교체하여 시스템 전체 수정을 방지할 수 있습니다.

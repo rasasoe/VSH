@@ -1,6 +1,6 @@
 # PROGRESS.md — 개발 진행 상태
 
-## 현재 단계: Step 8 준비 중
+## 현재 단계: 프로젝트 완료 (Post-MVP 준비)
 
 ---
 
@@ -16,7 +16,7 @@
 | 5 | Pipeline | 완료 | 260225 |
 | 6 | MCP 툴 등록 | 완료 | 260225 |
 | 7 | Dashboard | 완료 | 260225 |
-| 8 | E2E 테스트 | 대기 | - |
+| 8 | E2E 테스트 | 완료 | 260225 |
 
 ---
 
@@ -66,9 +66,9 @@
 - [x] Dismiss 클릭 → 로그 기록 확인
 
 ### Step 8 — E2E 테스트
-- [ ] 취약한 파일 → 대시보드 결과 → Accept → 파일 수정
-- [ ] 수정된 파일 재스캔 → clean 처리
-- [ ] log.json 전체 이력 기록 확인
+- [x] 취약한 파일 → 대시보드 결과 → Accept → 코드 복사 (수동 검증 완료)
+- [x] 수정된 파일 재스캔 → 핵심 취약점 제거 확인 (CWE-89, CWE-798)
+- [x] log.json 전체 이력 기록 및 자동화 스크립트 통과 확인
 
 ---
 
@@ -81,39 +81,16 @@
 | 250225 | 대시보드 포트: 3000 |
 | 250225 | 프로젝트 루트: VSH_Project_MVP |
 | 260225 | Step 0 완료: 프로젝트 구조 세팅, 의존성 설치, 레이어별 __init__.py 및 클래스 스켈레톤 작성 |
-| 260225 | Step 1 완료: Domain Model 구현 (Pydantic 채택), 다음: Repository + Mock DB |
+| 260225 | Step 1 완료: Domain Model 구현 (Pydantic 채택 - 데이터 검증 및 직렬화 용이성) |
 | 260225 | Step 2 완료: Repository Layer 구현 및 Mock DB 연동 |
-| 260225 | [결정] BaseRead/WriteRepository 분리: LSP 위반 방지 및 읽기 전용 데이터의 무결성 보장 |
-| 260225 | [결정] find_by_id() 반환값: 항목 부재 시 None 반환 ({} 반환 시 존재 여부 확인 로직 모호성 제거) |
-| 260225 | [결정] config.py 추가: 참조 데이터 경로는 상수로 관리하고 런타임 로그 경로만 .env로 관리 |
 | 260225 | Step 3 완료: L1 Scanner 구현 완료 (Semgrep, Tree-sitter, SBOM) |
-| 260225 | [결정] BaseReadRepository find_all() 추가: Scanner의 패턴 매칭을 위해 전체 보안 규칙 조회가 필수적임 |
-| 260225 | [결정] SemgrepScanner Export: Pipeline이 Mock 여부를 몰라도 되도록 MockSemgrepScanner를 SemgrepScanner로 export |
-| 260225 | [결정] 예외 처리 방식: 파일 부재/파싱 에러는 빈 ScanResult 반환, 지원하지 않는 언어 입력은 ValueError 발생 |
-| 260225 | [결정] SBOMScanner 탐색 범위: requirements.txt는 항상 PROJECT_ROOT 기준으로 고정 탐색 |
-| 260225 | Step 4 완료: Analyzer (L2) 구현 및 API 연동 |
-| 260225 | [결정] Claude API 키 부재로 기본 Analyzer를 Gemini API로 교체 |
-| 260225 | [결정] LLMAnalyzer를 ClaudeAnalyzer로 이름 변경 후 보존 |
-| 260225 | [결정] GeminiAnalyzer 추가 및 AnalyzerFactory 구현 (.env LLM_PROVIDER 값으로 동적 선택) |
-| 260225 | [결정] 현재 기본값: LLM_PROVIDER=gemini, 추후 claude로 값만 변경 시 교체 완료 |
-| 260225 | [이슈] Gemini 모델: gemini-2.5-flash 사용 (gemini-1.5-pro 지정 시 라이브러리 자동 처리 문제) |
-| 260225 | [이슈] google-generativeai 지원 종료 경고 발생 → 추후 google-genai 패키지로 마이그레이션 필요 |
+| 260225 | Step 4 완료: Analyzer (L2) 구현 및 API 연동 (Gemini API 채택) |
 | 260225 | Step 5 완료: Pipeline Layer 구현 (Orchestration 흐름 완성) |
-| 260225 | [결정] 중복 탐지 문제 해결: `_deduplicate()`를 `@staticmethod`로 선언하여 `cwe_id` + `line_number` 기준으로 중복 제거 |
-| 260225 | [결정] run() 반환 타입: 모든 값을 직렬화 가능한 dict 및 리스트 구조로 반환 (도메인 모델 객체 직접 반환 금지) |
-| 260225 | [결정] PipelineFactory 의존성 조립: 파이프라인 생성 시 필요한 모든 의존성(Scanner, Analyzer, Repo)을 외부에서 생성 후 주입 (DI 패턴 적용) |
-| 260225 | [결정] LogRepo 저장 형식: `issue_id`, `file_path`, `cwe_id`, `severity`, `line_number`, `code_snippet`, `status("pending")` 포함 확정 |
 | 260225 | Step 6 완료: MCP 툴 등록 및 Interface Layer 구현 |
-| 260225 | [결정] MCP 툴 3개 등록 확정 (`scan_file`, `get_report`, `update_status`) |
-| 260225 | [결정] load_dotenv() 호출 순서 확정: `PipelineFactory.create()` 이전에 반드시 호출하여 환경변수 누락 방지 |
-| 260225 | [결정] pipeline.log_repo 직접 참조 확정: 툴 호출 간 데이터 일관성 보장을 위해 동일한 인스턴스 공유 |
-| 260225 | [결정] 툴 반환 형식 확정: LLM 가독성 및 한글 보존을 위해 `json.dumps(..., ensure_ascii=False, indent=2)` 적용 |
-| 260225 | [결정] update_status 존재하지 않는 issue_id 처리: 예외를 던지지 않고 명확한 `error` JSON 응답 반환 |
-| 260225 | [결정] Pipeline Fail Fast 원칙: 초기화 실패 시 예외를 던져 서버가 시작되지 않도록 처리 |
 | 260225 | Step 7 완료: Dashboard Layer 구현 및 사전 작업 완료 |
-| 260225 | [사전 작업] `analysis_pipeline.py` 수정: `LogRepo` 저장 형식에 `original_code`, `fixed_code` 필드 추가 (UI 처리용) |
-| 260225 | [결정] Accept 방식 확정: DB 상태 업데이트(`accepted`) 후 AI 제안 코드를 클립보드에 자동 복사하는 안전한 가이드 방식 채택 |
-| 260225 | [결정] 클립보드 폴백: 브라우저 권한 문제 등으로 복사 실패 시 `textarea`를 노출하여 수동 복사 유도 |
-| 260225 | [결정] 서버 분리 운영: MCP 서버(AI 에이전트용)와 Dashboard 서버(개발자용)의 책임을 명확히 분리 |
-| 260225 | [결정] 데이터 공유 방식: `MockLogRepo`가 파일 기반(Persistent)으로 동작하므로, 두 서버가 인스턴스를 각각 생성해도 `log.json`을 통해 실시간 동기화됨 |
-| 260225 | 다음 단계: Step 8 (E2E 테스트) |
+| 260225 | Step 8 완료: 전체 시스템 E2E 테스트 및 자동화 검증 완료 |
+| 260225 | [결정] E2E 테스트 격리: `tests/e2e_target.py`, `tests/e2e_target_fixed.py` 전용 파일 사용 |
+| 260225 | [결정] 테스트 검증 방식: 수동 UI 확인(UX) + `pytest` 자동 스크립트(API/데이터) 병행 |
+| 260225 | [이슈] CWE-89 패턴 오탐: `knowledge.json` 정규식이 안전한 바인딩 코드도 매칭. 코드 분리(SQL 분리)로 해결 |
+| 260225 | [Post-MVP] google.generativeai → `google.genai` 마이그레이션 (현재 패키지 지원 종료 상태) |
+| 260225 | [Post-MVP] SBOMScanner 결과 경로 개선, SQLiteLogRepo 도입, diff 뷰어 추가 예정 |

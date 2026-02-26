@@ -37,4 +37,12 @@
     "pattern": "pickle.loads.*user_input",
     "reference": "OWASP Top 10 A08",
     "severity": "HIGH"
+  },
+  {
+    "id": "CWE-798",
+    "name": "Use of Hard-coded Credentials",
+    "description": "소스코드 내에 중요한 시크릿이나 인증 정보가 하드코딩됨",
+    "pattern": "SECRET_KEY\\s*=\\s*['\"][a-zA-Z0-9]+['\"]",
+    "reference": "KISA 시큐어코딩 AM-01",
+    "severity": "HIGH"
   }]
