@@ -9,7 +9,7 @@
 - [ ] API Server running (`run_demo.bat` or `start_api.bat`)
 - [ ] Terminal/PowerShell ready in `VSH_Project_MVP/` directory
 - [ ] `.env` configured with API key (optional - works without)
-- [ ] Sample vulnerable file visible: `test/fixtures/vuln_project/sqli.py`
+- [ ] Sample vulnerable file visible: `test/samples/vuln_project/sqli.py`
 
 ---
 
@@ -42,7 +42,7 @@
 python scripts/vsh_cli.py scan-file --help
 
 # Scan a vulnerable file
-python scripts/vsh_cli.py scan-file test/fixtures/vuln_project/sqli.py --format summary
+python scripts/vsh_cli.py scan-file test/samples/vuln_project/sqli.py --format summary
 ```
 
 **What to say as it runs:**
@@ -61,7 +61,7 @@ python scripts/vsh_cli.py scan-file test/fixtures/vuln_project/sqli.py --format 
 **Expected Output:**
 ```
 === VSH Analysis Result ===
-File: test/fixtures/vuln_project/sqli.py
+File: test/samples/vuln_project/sqli.py
 
 [Layer 1: SAST Findings]
 ✓ SQL Injection (line 45)
@@ -87,7 +87,7 @@ Status: Running in background (async)
 # In PowerShell/Terminal
 curl -X POST http://127.0.0.1:3000/scan/file `
   -H "Content-Type: application/json" `
-  -d '{"path": "test/fixtures/vuln_project/sqli.py", "format": "json"}'
+  -d '{"path": "test/samples/vuln_project/sqli.py", "format": "json"}'
 ```
 
 (Or use Postman/Insomnia if available)
@@ -103,7 +103,7 @@ curl -X POST http://127.0.0.1:3000/scan/file `
 **Expected JSON Response:**
 ```json
 {
-  "file": "test/fixtures/vuln_project/sqli.py",
+  "file": "test/samples/vuln_project/sqli.py",
   "status": "success",
   "l1_results": [
     {
@@ -133,7 +133,7 @@ curl -X POST http://127.0.0.1:3000/scan/file `
 
 ```bash
 # This will BLOCK until L3 finishes (if Docker available)
-python scripts/vsh_cli.py scan-file test/fixtures/vuln_project/sqli.py --wait-l3 --format summary
+python scripts/vsh_cli.py scan-file test/samples/vuln_project/sqli.py --wait-l3 --format summary
 ```
 
 **What to say:**
@@ -233,7 +233,7 @@ cat .env.example
 - **Pre-run the commands**: Before demo, run them once to warm up
 - **Use Markdown format**: `--format markdown` for prettier output than `summary`
 - **Skip L3 wait**: Don't use `--wait-l3` unless Docker is installed
-- **Use sample files**: We provide vulnerable samples in `test/fixtures/vuln_project/`
+- **Use sample files**: We provide vulnerable samples in `test/samples/vuln_project/`
 
 ---
 
@@ -257,7 +257,7 @@ Shows:
 ## Files to Reference During Demo
 
 - **Architecture**: `docs/L2-Architecture/03-architecture.md`
-- **Code samples**: `test/fixtures/vuln_project/*.py`
+- **Code samples**: `test/samples/vuln_project/*.py`
 - **API reference**: `VSH_Project_MVP/docs/API_REFERENCE.md`
 - **Configuration**: `.env.example`
 

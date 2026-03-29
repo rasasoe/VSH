@@ -262,7 +262,7 @@ Vulnerabilities: 0
 **To verify VSH is working**:
 ```bash
 # Use our intentionally-vulnerable sample
-python scripts/vsh_cli.py scan-file test/fixtures/vuln_project/sqli.py --format summary
+python scripts/vsh_cli.py scan-file test/samples/vuln_project/sqli.py --format summary
 ```
 
 This should show 3-5 vulnerabilities.

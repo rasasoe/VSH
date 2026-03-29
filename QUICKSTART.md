@@ -40,13 +40,13 @@ copy .env.example .env
 ```bash
 cd VSH_Project_MVP
 
-python scripts/vsh_cli.py scan-file test/fixtures/vuln_project/sqli.py --format summary
+python scripts/vsh_cli.py scan-file test/samples/vuln_project/sqli.py --format summary
 ```
 
 **Output** (30 seconds):
 ```
 === VSH Analysis Result ===
-File: test/fixtures/vuln_project/sqli.py
+File: test/samples/vuln_project/sqli.py
 Vulnerabilities: 3
 
 [L1: SAST]
@@ -72,7 +72,7 @@ run_demo.bat
 # Terminal 2: Send request
 curl -X POST http://127.0.0.1:3000/scan/file \
   -H "Content-Type: application/json" \
-  -d '{"path": "test/fixtures/vuln_project/sqli.py", "format": "summary"}'
+  -d '{"path": "test/samples/vuln_project/sqli.py", "format": "summary"}'
 ```
 
 ### Option C: Desktop GUI (If Available)
@@ -174,7 +174,7 @@ VSH/
 │   │   ├── vsh_cli.py        ← Command-line tool
 │   │   └── watch_and_scan.py ← File watcher
 │   └── test/
-│       └── fixtures/
+│       └── samples/
 │           └── vuln_project/ ← Sample vulnerable code
 ├── docs/                     ← Documentation
 └── README.md                 ← Full guide
