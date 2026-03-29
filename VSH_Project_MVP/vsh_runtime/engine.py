@@ -64,16 +64,16 @@ class VshRuntimeEngine:
             p["risk_score"] = score
             p["final_priority"] = pri
 
-        reasoning_map = {r["linked_vuln_id"]: r for r in reasoning}
-        l3_results = self.l3.validate_many([VulnRecord(**v) for v in vulns], reasoning_map=reasoning_map) if vulns else []
-
-        # annotate vuln_records with L3 cache and inferred final
-        for v, l3 in zip(vulns, l3_results):
-            v["l3_validated"] = l3.get("validated")
-            v["exploit_possible"] = l3.get("exploit_possible")
-            v["l3_confidence"] = l3.get("confidence")
-            v["l3_attack_scenario"] = l3.get("attack_scenario")
-            v["l3_severity_override"] = l3.get("severity_override")
+        # ✅ L3는 분리됨 (비동기 백그라운드 실행)
+        # L1/L2 결과만 즉시 반환하고, L3는 API/CLI에서 백그라운드로 실행됨
+        
+        # L3 placeholder (나중에 백그라운드에서 채워짐)
+        for v in vulns:
+            v["l3_validated"] = None
+            v["exploit_possible"] = None
+            v["l3_confidence"] = None
+            v["l3_attack_scenario"] = None
+            v["l3_severity_override"] = None
 
         diagnostics = [vuln_to_diagnostic(v).to_dict() for v in vulns]
         aggregate = self._build_aggregate(vulns, pkgs)
@@ -82,7 +82,7 @@ class VshRuntimeEngine:
             "vuln_records": vulns,
             "package_records": pkgs,
             "l2_reasoning_results": reasoning,
-            "l3_validation_results": l3_results,
+            "l3_validation_results": [],  # ✅ L3는 백그라운드에서 채워짐
             "diagnostics": diagnostics,
             "aggregate_summary": aggregate,
         }

@@ -5,17 +5,34 @@ import json
 import os
 import shutil
 import time
+import logging
 from vsh_runtime.engine import VshRuntimeEngine
 from vsh_runtime.watcher import ProjectWatcher
+from vsh_runtime.l3_integration import initialize_l3, get_l3_runner  # ✅ L3 추가
+from repository.shared_db_adapter import get_shared_db  # ✅ SharedDB 추가
 import threading
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# 로깅 설정
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="VSH API", version="1.0.0")
 
 engine = VshRuntimeEngine()
 watchers = {}  # path -> watcher instance
+
+# ✅ L3 초기화 (시작 시)
+shared_db = get_shared_db()
+l3_runner = get_l3_runner(shared_db)
+l3_enabled = initialize_l3(shared_db)
+
+if l3_enabled:
+    logger.info("✅ L3 pipeline enabled")
+else:
+    logger.warning("⚠️  L3 disabled - L1/L2 analysis will proceed normally")
 
 CONFIG_DIR = Path.home() / '.vsh'
 CONFIG_PATH = CONFIG_DIR / 'config.json'
@@ -135,18 +152,32 @@ def save_config(config: dict):
 def scan_file(req: ScanRequest):
     if not Path(req.path).is_file():
         raise HTTPException(status_code=400, detail="Invalid file path")
+    
+    # ✅ L1/L2 즉시 실행
     result = engine.analyze_file(req.path)
     save_diagnostics(req.path, result["diagnostics"])
     save_report(req.path, result)
+    
+    # ✅ L3 백그라운드 실행 (블로킹 없음)
+    if l3_enabled:
+        l3_runner.run_async(req.path)
+    
     return normalize_response(result, "file", req.path)
 
 @app.post("/scan/project")
 def scan_project(req: ScanRequest):
     if not Path(req.path).is_dir():
         raise HTTPException(status_code=400, detail="Invalid project path")
+    
+    # ✅ L1/L2 즉시 실행
     result = engine.analyze_project(req.path)
     save_diagnostics(req.path, result["diagnostics"])
     save_report(req.path, result)
+    
+    # ✅ L3 백그라운드 실행 (블로킹 없음)
+    if l3_enabled:
+        l3_runner.run_async(req.path)
+    
     return normalize_response(result, "project", req.path)
 
 @app.post("/annotate/file")
