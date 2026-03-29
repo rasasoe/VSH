@@ -1,6 +1,27 @@
-# VSH (Vibe Secure Hook)
+# VSH: Vibe Secure Helper - Integrated SAST + LLM Verification Engine
+
+**Three-Layered Security Analysis**:
+- **L1 (SAST)**: Semgrep-based vulnerability scanning (~200ms)
+- **L2 (Reasoning)**: LLM-powered contextual analysis (Claude/Gemini, 3-5s)  
+- **L3 (Verification)**: Evidence-based validation via SonarQube + SBOM + Docker PoC (async background)
+
+**✨ Key Feature**: L1 + L2 return immediately (~3-5 seconds). L3 runs asynchronously in background.
 
 Windows에서 **zip 압축 해제 후 바로 시연**할 수 있도록 실행 구조를 정리한 가이드입니다.
+
+---
+
+## 🚀 가장 빠른 시작 (5분)
+
+### 한 번의 클릭으로 시작
+
+```
+run_demo.bat를 더블 클릭하면:
+1. Python 확인
+2. 가상환경 활성화  
+3. 설정 파일 자동 생성
+4. API 서버 자동 실행 (http://127.0.0.1:3000)
+```
 
 ---
 
