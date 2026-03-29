@@ -1,0 +1,24 @@
+{
+  "vuln_records": [],
+  "package_records": [],
+  "l2_reasoning_results": [],
+  "l3_validation_results": [],
+  "diagnostics": [],
+  "aggregate_summary": {
+    "final_score": 0.0,
+    "risk_distribution": {
+      "P1": 0,
+      "P2": 0,
+      "P3": 0,
+      "P4": 0,
+      "INFO": 0
+    },
+    "reachable_issue_count": 0,
+    "high_priority_package_risk_count": 0
+  },
+  "previews": {
+    "inline": "",
+    "markdown": "# Diagnostics Preview\n",
+    "diagnostics_json": "[]"
+  }
+}
