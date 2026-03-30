@@ -1,0 +1,37 @@
+﻿# Environment
+.env
+.venv/
+venv/
+env/
+ENV/
+
+# Python caches and tooling
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime and generated data
+.vsh/
+.cache/
+.chroma_db/
+*.log
+output_real.txt
+test_version.txt
+mock_db/log.json
+mock_db/vsh.db
+
+# Frontend dependencies and build output
+vsh_desktop/node_modules/
+vsh_desktop/dist/
+vsh_desktop/dist-react/
+vsh_vscode/out/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
