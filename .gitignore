@@ -32,6 +32,8 @@ error.log
 # Local databases and reports
 VSH_Project_MVP/mock_db/log.json
 VSH_Project_MVP/mock_db/vsh.db
+VSH_Project_MVP/.runtime/
+VSH_Project_MVP/data/
 test/results/
 
 # IDE and OS files

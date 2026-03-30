@@ -9,6 +9,7 @@ from layer2.reasoning import L2ReasoningPipeline
 from models.common_schema import VulnRecord
 from models.vulnerability import Vulnerability
 from reporting.report_engine import ReportEngine
+from shared.runtime_settings import apply_runtime_env, load_config
 from vsh_runtime.diagnostics import build_inline_preview, build_markdown_preview, vuln_to_diagnostic
 from vsh_runtime.l3_validator import L3Validator
 from vsh_runtime.risk import compute_package_risk, compute_vuln_risk
@@ -18,9 +19,13 @@ from vsh_runtime.sca_usage import build_package_usage_index
 class VshRuntimeEngine:
     def __init__(self):
         self.l1 = VSHL1Scanner()
-        self.l2 = L2ReasoningPipeline()
+        self.l2 = self._build_l2_pipeline()
         self.l3 = L3Validator()
         self.report = ReportEngine()
+
+    def _build_l2_pipeline(self) -> L2ReasoningPipeline:
+        runtime_status = apply_runtime_env(load_config())
+        return L2ReasoningPipeline(provider=runtime_status["provider"])
 
     def analyze_file(self, file_path: str) -> dict:
         return self._analyze_target(file_path)
@@ -33,6 +38,7 @@ class VshRuntimeEngine:
         return {"diagnostics": analyzed["diagnostics"], "target": target_path}
 
     def _analyze_target(self, target_path: str) -> dict:
+        self.l2 = self._build_l2_pipeline()
         scan_result = self.l1.scan(target_path)
         reasoning = self.l2.run(scan_result.vuln_records)
         reasoning_by_id = {r["linked_vuln_id"]: r for r in reasoning}

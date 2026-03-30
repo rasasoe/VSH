@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 from layer2.reasoning.context_extractor import extract_finding_context
 from layer2.reasoning.models import validate_reasoning_result
 from layer2.reasoning.providers import (
@@ -10,11 +8,17 @@ from layer2.reasoning.providers import (
     OpenAIReasoningProvider,
 )
 from models.common_schema import VulnRecord
+from shared.runtime_settings import apply_runtime_env, load_config
 
 
 class L2ReasoningPipeline:
     def __init__(self, provider: str | None = None):
-        provided = provider or os.environ.get("LLM_PROVIDER", "mock").lower()
+        if provider:
+            provided = provider.lower()
+        else:
+            runtime_status = apply_runtime_env(load_config())
+            provided = runtime_status["provider"]
+
         if provided == "openai":
             try:
                 self.provider = OpenAIReasoningProvider()
@@ -30,9 +34,13 @@ class L2ReasoningPipeline:
 
     def run(self, vuln_records: list[VulnRecord]) -> list[dict]:
         results: list[dict] = []
+        fallback_provider = MockReasoningProvider()
         for vuln in vuln_records:
             context = extract_finding_context(vuln)
-            raw = self.provider.reason(vuln.model_dump(), context)
+            try:
+                raw = self.provider.reason(vuln.model_dump(), context)
+            except Exception:
+                raw = fallback_provider.reason(vuln.model_dump(), context)
             validated = validate_reasoning_result(raw)
             # map each record details
             record = validated.to_dict()

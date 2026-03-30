@@ -5,23 +5,26 @@ BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR
 
 # Storage directories (absolute, cwd-independent)
-MOCK_DB_DIR = BASE_DIR / "mock_db"
-CHROMA_DB_DIR = BASE_DIR / ".chroma_db"
-CHROMA_CACHE_DIR = BASE_DIR / ".cache" / "chroma"
+SEED_DB_DIR = BASE_DIR / "mock_db"
+RUNTIME_ROOT = Path.home() / ".vsh" / "runtime_data"
+DATA_DIR = RUNTIME_ROOT
+CHROMA_DB_DIR = DATA_DIR / "chroma"
+CHROMA_CACHE_DIR = DATA_DIR / "cache" / "chroma"
 CHROMA_COLLECTION = "vsh_kisa_guide"
 
 # Optional sqlite path used by local components/tools
-SQLITE_DB_PATH = MOCK_DB_DIR / "vsh.db"
+SQLITE_DB_PATH = DATA_DIR / "vsh.db"
 
 # Paths for read-only repositories
-KNOWLEDGE_PATH = MOCK_DB_DIR / "knowledge.json"
-FIX_PATH = MOCK_DB_DIR / "kisa_fix.json"
-LOG_PATH = MOCK_DB_DIR / "log.json"
+KNOWLEDGE_PATH = DATA_DIR / "knowledge.json"
+FIX_PATH = DATA_DIR / "kisa_fix.json"
+LOG_PATH = DATA_DIR / "log.json"
 
 
 def ensure_runtime_paths() -> None:
     """Ensure runtime paths exist regardless of launch cwd."""
-    MOCK_DB_DIR.mkdir(parents=True, exist_ok=True)
+    SEED_DB_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     CHROMA_DB_DIR.mkdir(parents=True, exist_ok=True)
     CHROMA_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 

@@ -1,161 +1,164 @@
-#!/usr/bin/env powershell
-# VSH Simple Setup & Run Script
+﻿$ErrorActionPreference = 'Stop'
 
-$ErrorActionPreference = "Stop"
+$rootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectDir = Join-Path $rootDir 'VSH_Project_MVP'
+$desktopDir = Join-Path $projectDir 'vsh_desktop'
+$venvDir = Join-Path $projectDir 'venv'
+$venvPythonExe = Join-Path $venvDir 'Scripts\python.exe'
+$pythonExe = 'python'
+$electronExe = Join-Path $desktopDir 'node_modules\electron\dist\electron.exe'
+$distIndex = Join-Path $desktopDir 'dist-react\index.html'
+$runtimeRoot = Join-Path $HOME '.vsh\runtime_data'
+$sqliteDb = Join-Path $runtimeRoot 'vsh.db'
+$chromaDir = Join-Path $runtimeRoot 'chroma'
+$apiUrl = 'http://127.0.0.1:3000/health'
 
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$projectDir = Join-Path $scriptDir "VSH_Project_MVP"
-$venvDir = Join-Path $projectDir "venv"
-$desktopDir = Join-Path $projectDir "vsh_desktop"
-
-Write-Host "====== VSH Setup (PowerShell) ======" -ForegroundColor Cyan
-Write-Host ""
-
-# 1. Check project
-Write-Host "[1/6] Checking project..." -ForegroundColor Yellow
-if (-not (Test-Path "$projectDir\requirements.txt")) {
-    Write-Host "ERROR: VSH_Project_MVP not found" -ForegroundColor Red
-    exit 1
-}
-Write-Host "OK: Project found" -ForegroundColor Green
-
-# 2. Check Python
-Write-Host "[2/6] Checking Python..." -ForegroundColor Yellow
-$pyVersion = python --version 2>&1
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Python not found" -ForegroundColor Red
-    exit 2
-}
-Write-Host "OK: $pyVersion" -ForegroundColor Green
-
-# 3. Check Node
-Write-Host "[3/6] Checking Node.js..." -ForegroundColor Yellow
-$nodeVersion = node --version 2>&1
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Node.js not found" -ForegroundColor Red
-    exit 3
-}
-Write-Host "OK: $nodeVersion" -ForegroundColor Green
-
-# 4. Setup venv and install Python packages
-Write-Host "[4/6] Python setup (pip install)..." -ForegroundColor Yellow
-
-if (-not (Test-Path $venvDir)) {
-    Write-Host "  Creating venv..." -ForegroundColor Gray
-    python -m venv $venvDir
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "ERROR: venv creation failed" -ForegroundColor Red
-        exit 4
+function Wait-ForApi {
+    param([int]$RetryCount = 30)
+    for ($i = 0; $i -lt $RetryCount; $i++) {
+        try {
+            $response = Invoke-RestMethod -Uri $apiUrl -TimeoutSec 2
+            if ($response.status -eq 'ok') {
+                return $true
+            }
+        } catch {
+            Start-Sleep -Seconds 1
+        }
     }
+    return $false
 }
 
-$pythonExe = Join-Path $venvDir "Scripts\python.exe"
-Write-Host "  Installing requirements..." -ForegroundColor Gray
+function Test-PythonModule {
+    param(
+        [string]$PythonCommand,
+        [string]$ModuleName
+    )
 
-& $pythonExe -m pip install --upgrade pip -q 2>&1 | Out-Null
-& $pythonExe -m pip install -r "$projectDir\requirements.txt" -q 2>&1 | Out-Null
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: pip install failed" -ForegroundColor Red
-    exit 5
-}
-Write-Host "OK: Python packages installed" -ForegroundColor Green
-
-# 5. npm install
-Write-Host "[5/6] Node.js setup (npm install)..." -ForegroundColor Yellow
-
-Push-Location $desktopDir
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: vsh_desktop not found" -ForegroundColor Red
-    exit 6
-}
-
-Write-Host "  Cleaning npm cache..." -ForegroundColor Gray
-npm cache clean --force 2>&1 | Out-Null
-
-Write-Host "  Installing npm packages..." -ForegroundColor Gray
-npm install --legacy-peer-deps --no-audit --no-fund --loglevel=error 2>&1 | Out-Null
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "  Retrying npm install..." -ForegroundColor Gray
-    npm install --legacy-peer-deps --no-audit --no-fund --loglevel=error 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "ERROR: npm install failed" -ForegroundColor Red
-        Pop-Location
-        exit 7
-    }
-}
-Write-Host "OK: npm packages installed" -ForegroundColor Green
-Pop-Location
-
-# 6. Start services
-Write-Host "[6/6] Starting services..." -ForegroundColor Yellow
-
-Push-Location $projectDir
-
-# Start API
-Write-Host "  Starting API server..." -ForegroundColor Gray
-$apiJob = Start-Job -ScriptBlock {
-    param($pythonExe, $projectDir)
-    Push-Location $projectDir
-    & $pythonExe -m uvicorn vsh_api.main:app --host 127.0.0.1 --port 3000 --log-level warning
-} -ArgumentList $pythonExe, $projectDir
-
-# Wait for API
-Write-Host "  Waiting for API..." -ForegroundColor Gray
-$retry = 0
-while ($retry -lt 30) {
+    $previousErrorAction = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     try {
-        $health = Invoke-WebRequest -Uri "http://127.0.0.1:3000/health" -TimeoutSec 1 -UseBasicParsing -ErrorAction Stop
-        Write-Host "OK: API is running" -ForegroundColor Green
-        break
-    }
-    catch {
-        $retry++
-        Start-Sleep -Seconds 1
+        & $PythonCommand -c "import $ModuleName" *> $null
+        return $LASTEXITCODE -eq 0
+    } catch {
+        return $false
+    } finally {
+        $ErrorActionPreference = $previousErrorAction
     }
 }
 
-if ($retry -ge 30) {
-    Write-Host "ERROR: API timeout" -ForegroundColor Red
-    Stop-Job $apiJob
-    exit 8
+function Test-PythonPip {
+    param([string]$PythonCommand)
+
+    $previousErrorAction = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $PythonCommand -m pip --version *> $null
+        return $LASTEXITCODE -eq 0
+    } catch {
+        return $false
+    } finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
 }
 
-# Start Vite
-Write-Host "  Starting Vite..." -ForegroundColor Gray
-Push-Location $desktopDir
-$viteJob = Start-Job -ScriptBlock {
-    cd $args[0]
-    npm run dev 2>&1 | Out-Null
-} -ArgumentList $desktopDir
-Pop-Location
+function Ensure-PythonRuntime {
+    if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+        throw 'Python is not installed or not on PATH.'
+    }
 
-Start-Sleep -Seconds 5
+    if (-not (Test-Path $venvPythonExe)) {
+        Write-Host 'Creating local virtual environment...' -ForegroundColor DarkGray
+        python -m venv $venvDir
+    }
 
-# Open browser
-Write-Host "  Opening browser..." -ForegroundColor Gray
-Start-Process "http://localhost:5173"
+    if ((Test-Path $venvPythonExe) -and (Test-PythonPip -PythonCommand $venvPythonExe)) {
+        $script:pythonExe = $venvPythonExe
+    } else {
+        $script:pythonExe = 'python'
+    }
 
-Write-Host ""
-Write-Host "====== SUCCESS ======" -ForegroundColor Cyan
-Write-Host "API running: http://127.0.0.1:3000" -ForegroundColor White
-Write-Host "Web UI: http://localhost:5173" -ForegroundColor White
-Write-Host ""
-Write-Host "Demo: VSH_Project_MVP/tests/samples/vuln_project/" -ForegroundColor Gray
-Write-Host ""
-Write-Host "Press Ctrl+C to stop" -ForegroundColor Yellow
+    if (-not (Test-PythonModule -PythonCommand $script:pythonExe -ModuleName 'chromadb')) {
+        Write-Host 'Installing Python requirements...' -ForegroundColor DarkGray
+        & $script:pythonExe -m pip install -r (Join-Path $projectDir 'requirements.txt') | Out-Host
+    }
+}
 
-Pop-Location
+function Ensure-DesktopRuntime {
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+        throw 'Node.js is not installed or not on PATH.'
+    }
 
-# Keep running
+    if (-not (Test-Path $electronExe)) {
+        Write-Host 'Installing desktop dependencies...' -ForegroundColor DarkGray
+        Push-Location $desktopDir
+        npm install | Out-Host
+        Pop-Location
+    }
+
+    if (-not (Test-Path $distIndex)) {
+        Write-Host 'Building desktop bundle...' -ForegroundColor DarkGray
+        Push-Location $desktopDir
+        npm run build | Out-Host
+        Pop-Location
+    }
+}
+
+Write-Host '=== VSH Desktop Launcher ===' -ForegroundColor Cyan
+
+if (-not (Test-Path (Join-Path $projectDir 'requirements.txt'))) {
+    throw 'VSH_Project_MVP not found.'
+}
+
+Write-Host '[1/5] Ensuring Python environment' -ForegroundColor Yellow
+Ensure-PythonRuntime
+Write-Host "Using Python: $pythonExe" -ForegroundColor Green
+
+Write-Host '[2/5] Ensuring desktop runtime' -ForegroundColor Yellow
+Ensure-DesktopRuntime
+
+Write-Host '[3/5] Preparing runtime databases' -ForegroundColor Yellow
+if ((Test-Path $sqliteDb) -and (Test-Path $chromaDir)) {
+    Write-Host 'Runtime databases already exist. Skipping bootstrap.' -ForegroundColor DarkGray
+} else {
+    Push-Location $projectDir
+    $env:PYTHONPATH = $projectDir
+    try {
+        & $pythonExe -m scripts.bootstrap_runtime_dbs | Out-Host
+    } catch {
+        Write-Warning 'Runtime DB bootstrap failed. Continuing with existing runtime files if available.'
+    }
+    Pop-Location
+}
+
+Write-Host '[4/5] Ensuring backend is running' -ForegroundColor Yellow
+$apiReady = $false
 try {
-    while ($true) {
-        Start-Sleep -Seconds 10
+    $health = Invoke-RestMethod -Uri $apiUrl -TimeoutSec 2
+    $apiReady = $health.status -eq 'ok'
+} catch {
+    $apiReady = $false
+}
+
+if (-not $apiReady) {
+    Start-Process -WindowStyle Minimized -FilePath $pythonExe -ArgumentList '-m','uvicorn','vsh_api.main:app','--host','127.0.0.1','--port','3000' -WorkingDirectory $projectDir
+    if (-not (Wait-ForApi)) {
+        throw 'Backend failed to start on http://127.0.0.1:3000.'
     }
 }
-catch {
-    Write-Host "Shutting down..." -ForegroundColor Yellow
-    Get-Job | Stop-Job
-    exit 0
-}
+
+Write-Host '[5/5] Launching VSH Desktop' -ForegroundColor Yellow
+$env:VSH_AUTO_START_API = 'false'
+$env:VSH_USE_DIST = 'true'
+Remove-Item Env:VSH_AUTO_SCAN -ErrorAction SilentlyContinue
+Remove-Item Env:VSH_AUTO_SCAN_MODE -ErrorAction SilentlyContinue
+Remove-Item Env:VSH_AUTO_SCAN_TARGET -ErrorAction SilentlyContinue
+Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+
+Start-Process -FilePath $electronExe -WorkingDirectory $desktopDir -ArgumentList '.'
+
+Write-Host ''
+Write-Host 'Ready.' -ForegroundColor Green
+Write-Host 'One command for demo launch:' -ForegroundColor Cyan
+Write-Host '  .\run_vsh.bat' -ForegroundColor White
+Write-Host "Backend: http://127.0.0.1:3000" -ForegroundColor Green
+Write-Host 'Desktop opens with no preselected target.' -ForegroundColor Green

@@ -50,7 +50,7 @@ class OpenAIReasoningProvider(ReasoningProvider):
         self._last_called = time.time()
 
         text = resp.choices[0].message.content.strip()
-        return self._parse_text_output(text, vuln_record)
+        return self._parse_text_output(text, vuln_record, context)
 
     def _build_prompt(self, vuln_record: dict, context: dict) -> str:
         return (
@@ -67,7 +67,7 @@ class OpenAIReasoningProvider(ReasoningProvider):
             "is_vulnerable (true/false), confidence (0-1), reasoning, attack_scenario, fix_suggestion, severity_override (LOW/MEDIUM/HIGH/CRITICAL)."
         )
 
-    def _parse_text_output(self, text: str, vuln_record: dict) -> dict:
+    def _parse_text_output(self, text: str, vuln_record: dict, context: dict) -> dict:
         try:
             import json
 

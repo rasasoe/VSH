@@ -1,0 +1,5 @@
+; whoami
+&& dir
+| type C:\Windows\win.ini
+`whoami`
+$(whoami)

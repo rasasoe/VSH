@@ -1,58 +1,75 @@
 ﻿# VSH Quick Start
 
-Prerequisites: Python 3.10+ and Node.js 18+ for the desktop app.
+## Required
 
-## 1. Configure environment
+- Python 3.10+
+- Node.js 18+
 
-```powershell
-Copy-Item .env.example .env
-```
+## Optional
 
-Optional keys:
+- Docker for L3 PoC verification
+- SONAR_TOKEN for Sonar-backed L3 workflows
+- GEMINI_API_KEY or OPENAI_API_KEY for real LLM calls
+- Syft for richer SBOM checks
 
-```env
-GEMINI_API_KEY=your_key_here
-SONAR_TOKEN=your_sonar_token
-```
-
-L1 scanning works without external API keys.
-
-## 2. Install Python dependencies
+## Fastest way to run
 
 ```powershell
-pip install -r VSH_Project_MVP/requirements.txt
+.\setup_and_run.ps1
 ```
 
-## 3. Start the API
+or
 
-```powershell
-./run_vsh.ps1
+```cmd
+run_vsh.bat
 ```
 
-Or:
+## Manual run
+
+### 1. Install backend packages
 
 ```powershell
-cd VSH_Project_MVP
+python -m pip install -r VSH_Project_MVP\requirements.txt
+```
+
+### 2. Install desktop packages
+
+```powershell
+cd VSH_Project_MVP\vsh_desktop
+npm install
+```
+
+### 3. Bootstrap runtime databases
+
+```powershell
+cd ..
+python -m scripts.bootstrap_runtime_dbs
+```
+
+### 4. Start the backend
+
+```powershell
 python -m uvicorn vsh_api.main:app --host 127.0.0.1 --port 3000
 ```
 
-## 4. Run a scan from CLI
+### 5. Build and open the desktop app
 
 ```powershell
-cd VSH_Project_MVP
-python scripts/vsh_cli.py scan-file tests/e2e/e2e_target.py --format summary
+cd vsh_desktop
+npm run build
+$env:VSH_USE_DIST='true'
+$env:VSH_AUTO_SCAN='1'
+$env:VSH_AUTO_SCAN_MODE='project'
+$env:VSH_AUTO_SCAN_TARGET='A:\VSH-main\VSH_Project_MVP\tests\fixtures\vuln_project'
+Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+.\node_modules\electron\dist\electron.exe .
 ```
 
-## 5. Run the desktop app
+## Runtime DB paths
 
-```powershell
-cd VSH_Project_MVP/vsh_desktop
-npm install
-npm run electron-dev
-```
+- SQLite: `C:\Users\<you>\.vsh\runtime_data\vsh.db`
+- Chroma: `C:\Users\<you>\.vsh\runtime_data\chroma`
 
-## Notes
+## Demo target
 
-- L3 is optional and stays disabled unless Docker and `SONAR_TOKEN` are configured.
-- Generated runtime data is ignored by git.
-- Project documentation lives in `docs/` and `VSH_Project_MVP/docs/`.
+- `VSH_Project_MVP\tests\fixtures\vuln_project`

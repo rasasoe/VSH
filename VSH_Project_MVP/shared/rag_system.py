@@ -19,7 +19,7 @@ class RAGRetriever:
     - Top-K 寃곌낵 諛섑솚
     """
     
-    def __init__(self, db_path: str = "mock_db/vsh.db"):
+    def __init__(self, db_path: str = "data/vsh.db"):
         self.db = VulnerabilityDatabase(db_path)
         self.cache = {}
     
@@ -206,7 +206,7 @@ class RAGSystem:
     Retrieval + Generation???듯빀
     """
     
-    def __init__(self, db_path: str = "mock_db/vsh.db"):
+    def __init__(self, db_path: str = "data/vsh.db"):
         self.retriever = RAGRetriever(db_path)
         self.generator = RAGGenerator(self.retriever)
     
@@ -221,5 +221,6 @@ class RAGSystem:
         """醫낅즺"""
         self.retriever.close()
 
-
+
+
 

@@ -6,7 +6,7 @@ from .base_repository import BaseReadRepository
 try:
     from config import KNOWLEDGE_PATH
 except ImportError:
-    KNOWLEDGE_PATH = str(Path(__file__).resolve().parent.parent / "mock_db" / "knowledge.json")
+    KNOWLEDGE_PATH = str(Path(__file__).resolve().parent.parent / "data" / "knowledge.json")
 
 KNOWLEDGE_PATH_OBJ = Path(KNOWLEDGE_PATH).resolve()
 KNOWLEDGE_PATH_OBJ.parent.mkdir(parents=True, exist_ok=True)

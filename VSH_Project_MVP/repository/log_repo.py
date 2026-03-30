@@ -10,7 +10,7 @@ load_dotenv()
 try:
     from config import LOG_PATH as DEFAULT_LOG_PATH
 except ImportError:
-    DEFAULT_LOG_PATH = str(Path(__file__).resolve().parent.parent / "mock_db" / "log.json")
+    DEFAULT_LOG_PATH = str(Path(__file__).resolve().parent.parent / "data" / "log.json")
 
 LOG_PATH = str(Path(os.getenv("LOG_PATH", DEFAULT_LOG_PATH)).resolve())
 Path(LOG_PATH).parent.mkdir(parents=True, exist_ok=True)

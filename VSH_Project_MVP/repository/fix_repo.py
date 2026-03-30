@@ -6,7 +6,7 @@ from .base_repository import BaseReadRepository
 try:
     from config import FIX_PATH
 except ImportError:
-    FIX_PATH = str(Path(__file__).resolve().parent.parent / "mock_db" / "kisa_fix.json")
+    FIX_PATH = str(Path(__file__).resolve().parent.parent / "data" / "kisa_fix.json")
 
 FIX_PATH_OBJ = Path(FIX_PATH).resolve()
 FIX_PATH_OBJ.parent.mkdir(parents=True, exist_ok=True)

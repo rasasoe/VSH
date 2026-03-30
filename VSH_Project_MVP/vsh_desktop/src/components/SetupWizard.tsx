@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import SettingsPage from './SettingsPage';
 
 interface SetupWizardProps {
   apiBase: string;
@@ -10,78 +9,117 @@ function SetupWizard({ apiBase, onComplete }: SetupWizardProps) {
   const [step, setStep] = useState(1);
   const [config, setConfig] = useState<any>({
     llm: {
-      provider: 'mock',
+      provider: 'auto',
       gemini_api_key: '',
-      openai_api_key: ''
+      openai_api_key: '',
+      model: 'gemini-1.5-pro',
+      enable_l2: true,
+      enable_l3: true,
     },
     tools: {
-      syft_enabled: true,
-      syft_path: ''
+      syft_path: '',
+      syft_auto_detect: true,
     },
     scan: {
       watch_on_save: true,
       auto_scan_on_select: false,
-      enable_sbom: true
+      enable_sbom: true,
     },
     output: {
       export_path: './exports',
       save_json: true,
-      save_markdown: true
-    }
+      save_markdown: true,
+      save_diagnostics: true,
+      auto_open_report_after_scan: false,
+    },
   });
 
-  const next = () => setStep(prev => Math.min(prev + 1, 6));
-  const prev = () => setStep(prev => Math.max(prev - 1, 1));
+  const next = () => setStep((prev) => Math.min(prev + 1, 4));
+  const prev = () => setStep((prev) => Math.max(prev - 1, 1));
 
-  const renderContent = () => {
+  const renderStep = () => {
     switch (step) {
       case 1:
         return (
           <div>
             <h2>Welcome to VSH</h2>
-            <p>VSH 설정을 완료하면 바로 분석을 시작할 수 있습니다.</p>
-            <button onClick={next}>다음</button>
+            <p>VSH now handles local runtime pieces automatically so setup is much simpler.</p>
+            <ul>
+              <li>Python and Node.js are required.</li>
+              <li>SQLite and Chroma runtime storage are automatic.</li>
+              <li>LLM API keys are optional and only needed for live reasoning.</li>
+              <li>Syft is auto-detected if installed.</li>
+            </ul>
+            <button onClick={next}>Next</button>
           </div>
         );
       case 2:
         return (
           <div>
-            <h2>LLM Provider 선택</h2>
-            <select value={config.llm.provider} onChange={e => setConfig((c:any) => ({ ...c, llm: { ...c.llm, provider: e.target.value } }))}>
-              <option value="mock">Mock</option>
-              <option value="gemini">Gemini</option>
-              <option value="openai">OpenAI</option>
-            </select>
-            <div style={{ marginTop: 10 }}><button onClick={prev}>이전</button> <button onClick={next}>다음</button></div>
+            <h2>LLM Setup</h2>
+            <p>Pick how VSH should choose its reasoning provider. Auto is recommended.</p>
+            <div style={{ marginBottom: 12 }}>
+              <label>Provider mode:&nbsp;</label>
+              <select value={config.llm.provider} onChange={(e) => setConfig((c: any) => ({ ...c, llm: { ...c.llm, provider: e.target.value } }))}>
+                <option value="auto">Auto</option>
+                <option value="gemini">Gemini only</option>
+                <option value="openai">OpenAI only</option>
+                <option value="mock">Mock only</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Gemini API Key:&nbsp;</label>
+              <input value={config.llm.gemini_api_key} onChange={(e) => setConfig((c: any) => ({ ...c, llm: { ...c.llm, gemini_api_key: e.target.value } }))} style={{ width: 360 }} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>OpenAI API Key:&nbsp;</label>
+              <input value={config.llm.openai_api_key} onChange={(e) => setConfig((c: any) => ({ ...c, llm: { ...c.llm, openai_api_key: e.target.value } }))} style={{ width: 360 }} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button onClick={prev}>Back</button>
+              <button onClick={next} style={{ marginLeft: 8 }}>Next</button>
+            </div>
           </div>
         );
       case 3:
         return (
           <div>
-            <h2>API Key 입력</h2>
-            <p>다음 입력 후 연결 테스트를 해주세요.</p>
-            <div>Gemini Key: <input value={config.llm.gemini_api_key} onChange={e => setConfig((c:any) => ({ ...c, llm: { ...c.llm, gemini_api_key: e.target.value } }))} /></div>
-            <div>OpenAI Key: <input value={config.llm.openai_api_key} onChange={e => setConfig((c:any) => ({ ...c, llm: { ...c.llm, openai_api_key: e.target.value } }))} /></div>
-            <div style={{ marginTop: 10 }}><button onClick={prev}>이전</button> <button onClick={next}>다음</button></div>
+            <h2>Local Runtime</h2>
+            <p>Chroma RAG and SQLite are automatic. Syft is optional and auto-detected, but you can override the path if needed.</p>
+            <div style={{ marginBottom: 8 }}>
+              <label>Override Syft path:&nbsp;</label>
+              <input value={config.tools.syft_path} onChange={(e) => setConfig((c: any) => ({ ...c, tools: { ...c.tools, syft_path: e.target.value } }))} style={{ width: 360 }} placeholder="Leave blank for auto-detect" />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Auto detect Syft:&nbsp;</label>
+              <input type="checkbox" checked={config.tools.syft_auto_detect} onChange={(e) => setConfig((c: any) => ({ ...c, tools: { ...c.tools, syft_auto_detect: e.target.checked } }))} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button onClick={prev}>Back</button>
+              <button onClick={next} style={{ marginLeft: 8 }}>Next</button>
+            </div>
           </div>
         );
       case 4:
         return (
           <div>
-            <h2>Syft 확인</h2>
-            <p>Syft 설치 여부를 확인합니다.</p>
-            <button onClick={next}>다음</button>
-            <button onClick={prev}>이전</button>
-          </div>
-        );
-      case 5:
-        return (
-          <div>
-            <h2>기본 설정</h2>
-            <label>Watch on Save: <input type="checkbox" checked={config.scan.watch_on_save} onChange={e => setConfig((c:any) => ({ ...c, scan: { ...c.scan, watch_on_save: e.target.checked } }))} /></label><br/>
-            <label>Auto Scan on Select: <input type="checkbox" checked={config.scan.auto_scan_on_select} onChange={e => setConfig((c:any) => ({ ...c, scan: { ...c.scan, auto_scan_on_select: e.target.checked } }))} /></label><br/>
-            <label>Enable SBOM: <input type="checkbox" checked={config.scan.enable_sbom} onChange={e => setConfig((c:any) => ({ ...c, scan: { ...c.scan, enable_sbom: e.target.checked } }))} /></label><br/>
-            <button onClick={prev}>이전</button> <button onClick={() => { onComplete(config); }}>완료</button>
+            <h2>Default Scan Behavior</h2>
+            <div style={{ marginBottom: 8 }}>
+              <label>Watch on Save:&nbsp;</label>
+              <input type="checkbox" checked={config.scan.watch_on_save} onChange={(e) => setConfig((c: any) => ({ ...c, scan: { ...c.scan, watch_on_save: e.target.checked } }))} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Auto Scan on Select:&nbsp;</label>
+              <input type="checkbox" checked={config.scan.auto_scan_on_select} onChange={(e) => setConfig((c: any) => ({ ...c, scan: { ...c.scan, auto_scan_on_select: e.target.checked } }))} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Enable SBOM when Syft is available:&nbsp;</label>
+              <input type="checkbox" checked={config.scan.enable_sbom} onChange={(e) => setConfig((c: any) => ({ ...c, scan: { ...c.scan, enable_sbom: e.target.checked } }))} />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button onClick={prev}>Back</button>
+              <button onClick={() => onComplete(config)} style={{ marginLeft: 8 }}>Finish</button>
+            </div>
           </div>
         );
       default:
@@ -90,10 +128,11 @@ function SetupWizard({ apiBase, onComplete }: SetupWizardProps) {
   };
 
   return (
-    <div style={{ padding: 20, fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ padding: 24, fontFamily: 'Arial, sans-serif', maxWidth: 720 }}>
       <h1>Setup Wizard</h1>
-      <p>Step {step} / 5</p>
-      {renderContent()}
+      <p>API base: {apiBase}</p>
+      <p>Step {step} / 4</p>
+      {renderStep()}
     </div>
   );
 }

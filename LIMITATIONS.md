@@ -1,7 +1,10 @@
-# LIMITATIONS
+﻿# LIMITATIONS
 
-- L1은 fast heuristic 중심이며 완전한 taint/call graph 분석이 아님.
-- L2는 context-aware reasoning이지만 runtime proof가 아님.
-- L3만 deep validation 담당(현재는 slot/queue 중심).
-- SCA usage 분석은 exploitability-aware heuristic이며 완전한 interprocedural 분석이 아님.
-- IDE 연동은 watcher/MCP/diagnostics까지 구현, VSCode extension/LSP는 future work.
+- L1 is still primarily a fast heuristic and rule-driven layer, not a full program-analysis engine.
+- L2 can run in mock mode and is not guaranteed to use a real provider unless API keys are configured.
+- L3 remains dependency-gated and is not fully active in base setup without Sonar and related tooling.
+- Some repository and class names still reflect older mock-era naming even though the runtime path now uses real runtime DBs.
+- Compatibility wrappers and legacy paths still exist to reduce breakage, so the codebase is not yet fully consolidated.
+- Some non-user-facing source files still contain legacy comments or encoding artifacts that do not affect the main product flow.
+- Syft-based dependency analysis is optional and not bundled automatically at the OS level.
+- The desktop app is currently run from source rather than from a packaged installer.

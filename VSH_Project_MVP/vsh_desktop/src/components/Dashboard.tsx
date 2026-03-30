@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 
 interface DashboardProps {
   summary?: {
@@ -23,7 +23,16 @@ function Dashboard({ summary }: DashboardProps) {
   );
 
   const StatBox = ({ title, value, borderColor }: { title: string; value: number; borderColor: string }) => (
-    <div style={{ border: `1px solid ${borderColor}`, padding: 10, borderRadius: 5, minWidth: 100, textAlign: 'center' }}>
+    <div
+      style={{
+        border: `1px solid ${borderColor}`,
+        padding: 10,
+        borderRadius: 5,
+        minWidth: 100,
+        textAlign: 'center',
+        backgroundColor: '#fff',
+      }}
+    >
       <h3 style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#666' }}>{title}</h3>
       <p style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: borderColor }}>{value}</p>
     </div>
@@ -32,15 +41,17 @@ function Dashboard({ summary }: DashboardProps) {
   if (total === 0) {
     return (
       <div style={{ marginTop: 20, padding: 20, backgroundColor: '#f9f9f9', borderRadius: 8, border: '1px solid #ddd' }}>
-        <h2>📊 Dashboard</h2>
-        <p style={{ color: '#999', marginTop: 10 }}>스캔 결과가 없습니다. 파일이나 프로젝트를 선택하고 스캔을 시작하세요.</p>
+        <h2>Dashboard</h2>
+        <p style={{ color: '#666', marginTop: 10 }}>
+          No scan results yet. Select a file or project and start a scan to populate the dashboard.
+        </p>
       </div>
     );
   }
 
   return (
     <div style={{ marginTop: 20 }}>
-      <h2>📊 Dashboard</h2>
+      <h2>Dashboard</h2>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
         <StatBox title="Total Findings" value={total} borderColor="#999" />
         <StatBox title="Critical" value={critical} borderColor="#d32f2f" />
@@ -48,13 +59,23 @@ function Dashboard({ summary }: DashboardProps) {
         <StatBox title="Medium" value={medium} borderColor="#fbc02d" />
         <StatBox title="Low" value={low} borderColor="#388e3c" />
       </div>
-      
+
       {topRiskyFiles.length > 0 && (
         <div>
-          <h3>🔥 Top Risky Files</h3>
+          <h3>Top Risky Files</h3>
           <ul style={{ listStyleType: 'none', paddingLeft: 0 }}>
             {topRiskyFiles.map(({ file, count }) => (
-              <li key={file} style={{ padding: '8px', backgroundColor: '#f5f5f5', marginBottom: 5, borderRadius: 4, borderLeft: '4px solid #ff6b6b', paddingLeft: 12 }}>
+              <li
+                key={file}
+                style={{
+                  padding: '8px',
+                  backgroundColor: '#f5f5f5',
+                  marginBottom: 5,
+                  borderRadius: 4,
+                  borderLeft: '4px solid #ff6b6b',
+                  paddingLeft: 12,
+                }}
+              >
                 <code>{file}</code>: <strong>{count}</strong> issue{count !== 1 ? 's' : ''}
               </li>
             ))}

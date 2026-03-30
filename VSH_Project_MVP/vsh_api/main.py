@@ -2,104 +2,58 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from pathlib import Path
 import json
-import os
-import shutil
 import time
 import logging
-from vsh_runtime.engine import VshRuntimeEngine
-from vsh_runtime.watcher import ProjectWatcher
-from vsh_runtime.l3_integration import initialize_l3, get_l3_runner  # ✅ L3 추가
-from repository.shared_db_adapter import get_shared_db  # ✅ SharedDB 추가
 import threading
+
 from dotenv import load_dotenv
 
-load_dotenv()
+from config import CHROMA_DB_DIR, SQLITE_DB_PATH
+from repository.shared_db_adapter import get_shared_db
+from shared.runtime_settings import (
+    CONFIG_PATH,
+    apply_runtime_env,
+    detect_syft,
+    get_effective_llm_status,
+    load_config,
+    save_config,
+)
+from vsh_runtime.engine import VshRuntimeEngine
+from vsh_runtime.l3_integration import get_l3_runner, initialize_l3
+from vsh_runtime.watcher import ProjectWatcher
 
-# 로깅 설정
+load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="VSH API", version="1.0.0")
 
+apply_runtime_env(load_config())
 engine = VshRuntimeEngine()
-watchers = {}  # path -> watcher instance
+watchers: dict[str, ProjectWatcher] = {}
 
-# ✅ L3 초기화 (시작 시)
 shared_db = get_shared_db()
 l3_runner = get_l3_runner(shared_db)
 l3_enabled = initialize_l3(shared_db)
 
 if l3_enabled:
-    logger.info("✅ L3 pipeline enabled")
+    logger.info("L3 pipeline enabled")
 else:
-    logger.warning("⚠️  L3 disabled - L1/L2 analysis will proceed normally")
+    logger.warning("L3 disabled. L1/L2 analysis remains available.")
 
-CONFIG_DIR = Path.home() / '.vsh'
-CONFIG_PATH = CONFIG_DIR / 'config.json'
-
-DEFAULT_CONFIG = {
-    "llm": {
-        "provider": "mock",
-        "gemini_api_key": "",
-        "openai_api_key": "",
-        "model": "gemini-1.5-pro",
-        "enable_l2": True,
-        "enable_l3": True
-    },
-    "tools": {
-        "syft_enabled": True,
-        "syft_path": "",
-        "syft_auto_detect": True
-    },
-    "scan": {
-        "watch_on_save": True,
-        "auto_scan_on_select": False,
-        "enable_sbom": True,
-        "max_files_per_scan": 200,
-        "exclude_dirs": [
-            ".git",
-            "node_modules",
-            "venv",
-            "__pycache__",
-            "dist",
-            "build"
-        ],
-        "include_extensions": [
-            ".py",
-            ".js",
-            ".ts",
-            ".jsx",
-            ".tsx"
-        ]
-    },
-    "output": {
-        "export_path": "./exports",
-        "save_json": True,
-        "save_markdown": True,
-        "save_diagnostics": True,
-        "auto_open_report_after_scan": False
-    },
-    "ui": {
-        "theme": "dark",
-        "show_code_preview": True,
-        "show_attack_scenario": True,
-        "show_validation_panel": True
-    },
-    "system": {
-        "api_base_url": "http://localhost:3000",
-        "config_version": 1
-    }
-}
 
 class ScanRequest(BaseModel):
     path: str
 
+
 class WatchRequest(BaseModel):
     path: str
+
 
 class AnnotateRequest(BaseModel):
     path: str
     in_place: bool = False
+
 
 def save_diagnostics(target_path: str, diagnostics: dict):
     if Path(target_path).is_file():
@@ -108,8 +62,9 @@ def save_diagnostics(target_path: str, diagnostics: dict):
         vsh_dir = Path(target_path) / ".vsh"
     vsh_dir.mkdir(exist_ok=True)
     diag_file = vsh_dir / "diagnostics.json"
-    with open(diag_file, "w", encoding="utf-8") as f:
-        json.dump(diagnostics, f, ensure_ascii=False, indent=2)
+    with open(diag_file, "w", encoding="utf-8") as handle:
+        json.dump(diagnostics, handle, ensure_ascii=False, indent=2)
+
 
 def save_report(target_path: str, report: dict):
     if Path(target_path).is_file():
@@ -119,74 +74,49 @@ def save_report(target_path: str, report: dict):
     vsh_dir.mkdir(exist_ok=True)
     json_file = vsh_dir / "report.json"
     md_file = vsh_dir / "report.md"
-    with open(json_file, "w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
-    # Markdown은 engine에서 생성된 previews 사용
+    with open(json_file, "w", encoding="utf-8") as handle:
+        json.dump(report, handle, ensure_ascii=False, indent=2)
     if "previews" in report and "markdown" in report["previews"]:
-        with open(md_file, "w", encoding="utf-8") as f:
-            f.write(report["previews"]["markdown"])
+        with open(md_file, "w", encoding="utf-8") as handle:
+            handle.write(report["previews"]["markdown"])
 
-
-def ensure_config_path():
-    CONFIG_DIR.mkdir(exist_ok=True, parents=True)
-    if not CONFIG_PATH.exists():
-        with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
-            json.dump(DEFAULT_CONFIG, f, ensure_ascii=False, indent=2)
-
-
-def load_config() -> dict:
-    ensure_config_path()
-    try:
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
-        return DEFAULT_CONFIG.copy()
-
-
-def save_config(config: dict):
-    ensure_config_path()
-    with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
 
 @app.post("/scan/file")
 def scan_file(req: ScanRequest):
     if not Path(req.path).is_file():
         raise HTTPException(status_code=400, detail="Invalid file path")
-    
-    # ✅ L1/L2 즉시 실행
+
     result = engine.analyze_file(req.path)
     save_diagnostics(req.path, result["diagnostics"])
     save_report(req.path, result)
-    
-    # ✅ L3 백그라운드 실행 (블로킹 없음)
+
     if l3_enabled:
         l3_runner.run_async(req.path)
-    
+
     return normalize_response(result, "file", req.path)
+
 
 @app.post("/scan/project")
 def scan_project(req: ScanRequest):
     if not Path(req.path).is_dir():
         raise HTTPException(status_code=400, detail="Invalid project path")
-    
-    # ✅ L1/L2 즉시 실행
+
     result = engine.analyze_project(req.path)
     save_diagnostics(req.path, result["diagnostics"])
     save_report(req.path, result)
-    
-    # ✅ L3 백그라운드 실행 (블로킹 없음)
+
     if l3_enabled:
         l3_runner.run_async(req.path)
-    
+
     return normalize_response(result, "project", req.path)
+
 
 @app.post("/annotate/file")
 def annotate_file(req: AnnotateRequest):
-    """Generate annotated source code for a single file."""
     try:
         if not Path(req.path).is_file():
             raise HTTPException(status_code=400, detail="Invalid file path")
-        
+
         result = engine.annotate_file(req.path, in_place=req.in_place)
         return {
             "status": "success",
@@ -194,20 +124,20 @@ def annotate_file(req: AnnotateRequest):
             "in_place": req.in_place,
             "annotated_files": result.get("annotated_files", {}),
             "total_issues": result.get("total_issues", 0),
-            "message": f"Generated annotated version with {result.get('total_issues', 0)} issue(s) marked"
+            "message": f"Generated annotated version with {result.get('total_issues', 0)} issue(s) marked",
         }
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Annotation failed: {str(e)}")
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Annotation failed: {exc}") from exc
+
 
 @app.post("/annotate/project")
 def annotate_project(req: AnnotateRequest):
-    """Generate annotated source files for a project."""
     try:
         if not Path(req.path).is_dir():
             raise HTTPException(status_code=400, detail="Invalid project path")
-        
+
         result = engine.annotate_project(req.path, in_place=req.in_place)
         return {
             "status": "success",
@@ -216,12 +146,13 @@ def annotate_project(req: AnnotateRequest):
             "files_annotated": result.get("files_annotated", 0),
             "annotated_files": result.get("annotated_files", {}),
             "total_issues": result.get("total_issues", 0),
-            "message": f"Annotated {result.get('files_annotated', 0)} file(s) with {result.get('total_issues', 0)} issue(s) total"
+            "message": f"Annotated {result.get('files_annotated', 0)} file(s) with {result.get('total_issues', 0)} issue(s) total",
         }
-    except NotADirectoryError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Annotation failed: {str(e)}")
+    except NotADirectoryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Annotation failed: {exc}") from exc
+
 
 @app.get("/diagnostics")
 def get_diagnostics(path: str):
@@ -232,8 +163,8 @@ def get_diagnostics(path: str):
     diag_file = vsh_dir / "diagnostics.json"
     if not diag_file.exists():
         raise HTTPException(status_code=404, detail="Diagnostics not found")
-    with open(diag_file, "r", encoding="utf-8") as f:
-        return json.load(f)
+    with open(diag_file, "r", encoding="utf-8") as handle:
+        return json.load(handle)
 
 
 @app.get("/settings")
@@ -243,91 +174,88 @@ def get_settings():
 
 @app.post("/settings")
 def post_settings(config: dict):
-    save_config(config)
-    return {"status": "ok", "settings": config}
+    saved = save_config(config)
+    apply_runtime_env(saved)
+    return {"status": "ok", "settings": saved}
 
 
 @app.post("/settings/test-llm")
 def test_llm(settings: dict):
-    provider = settings.get('provider', 'mock')
-    if provider == 'mock':
-        return {"provider": provider, "connected": True, "reason": "Mock provider always connected"}
-
-    if provider == 'gemini':
-        key = settings.get('gemini_api_key', '') or os.environ.get('GOOGLE_API_KEY') or os.environ.get('GEMINI_API_KEY', '')
-    elif provider == 'openai':
-        key = settings.get('openai_api_key', '')
-    else:
-        return {"provider": provider, "connected": False, "reason": "Unknown provider"}
-
-    if not key:
-        return {"provider": provider, "connected": False, "reason": "API key not configured"}
-
-    # 실제 호출 여부는 환경 의존, 우선 키 존재만 검증
-    return {"provider": provider, "connected": True, "reason": "API key set"}
+    llm_status = get_effective_llm_status({"llm": settings})
+    return {
+        "provider": llm_status["provider"],
+        "requested_provider": llm_status["requested_provider"],
+        "connected": llm_status["connected"],
+        "reason": llm_status["reason"],
+    }
 
 
 @app.post("/settings/check-syft")
 def check_syft(settings: dict):
-    syft_path = settings.get('syft_path', '')
-    syft_installed = False
-    syft_found = ''
-
-    if syft_path:
-        if Path(syft_path).exists():
-            syft_installed = True
-            syft_found = syft_path
-    else:
-        what = shutil.which('syft')
-        if what:
-            syft_installed = True
-            syft_found = what
-
-    return {
-        "syft": {
-            "installed": syft_installed,
-            "path": syft_found
-        }
-    }
+    return {"syft": detect_syft({"tools": settings})}
 
 
 @app.get("/system/status")
 def system_status():
     config = load_config()
-    syft_info = check_syft({
-        'syft_path': config.get('tools', {}).get('syft_path', '')
-    })['syft']
-    llm = config.get('llm', {})
+    llm_status = get_effective_llm_status(config)
+    syft_info = detect_syft(config)
+    shared_db_path = getattr(shared_db, "db_file", None)
+    chroma_path = Path(CHROMA_DB_DIR)
+    sqlite_path = Path(SQLITE_DB_PATH)
+    chroma_ready = chroma_path.exists() and any(chroma_path.iterdir())
+    l3_available = bool(l3_enabled and llm_status["enable_l3"])
+    l3_reason = "initialized" if l3_available else "disabled or missing dependencies"
 
     return {
         "api_server": "running",
         "python_core": "ready",
         "syft": syft_info,
-        "llm": {
-            "provider": llm.get('provider', 'mock'),
-            "configured": bool((llm.get('gemini_api_key') or llm.get('openai_api_key') or os.environ.get('GOOGLE_API_KEY'))),
-            "connected": llm.get('provider', 'mock') == 'mock' or bool(llm.get('gemini_api_key') or llm.get('openai_api_key') or os.environ.get('GOOGLE_API_KEY'))
+        "llm": llm_status,
+        "l2": {
+            "enabled": llm_status["enable_l2"],
+            "provider": llm_status["provider"],
+            "requested_provider": llm_status["requested_provider"],
+            "rag_mode": "automatic",
+            "reason": "VSH uses the local Chroma runtime database automatically when it is available.",
         },
-        "config_path": str(CONFIG_PATH)
+        "l3": {
+            "enabled": l3_available,
+            "reason": l3_reason,
+        },
+        "shared_db": {
+            "path": str(shared_db_path) if shared_db_path else None,
+            "exists": bool(shared_db_path and Path(shared_db_path).exists()),
+        },
+        "sqlite": {
+            "path": str(sqlite_path),
+            "exists": sqlite_path.exists(),
+        },
+        "chroma": {
+            "path": str(chroma_path),
+            "exists": chroma_path.exists(),
+            "status": "ready" if chroma_ready else "empty",
+            "rag_enabled": chroma_ready,
+        },
+        "config_path": str(CONFIG_PATH),
     }
+
 
 @app.post("/watch/start")
 def watch_start(req: WatchRequest):
-    """Start watching a file or directory for changes."""
     if not Path(req.path).exists():
         raise HTTPException(status_code=400, detail="Path does not exist")
-    
+
     if req.path in watchers:
         raise HTTPException(status_code=400, detail="Watcher already running for this path")
-    
+
     watcher = ProjectWatcher(req.path, debounce_sec=1.0)
     if not watcher.start():
         raise HTTPException(status_code=500, detail="Failed to start watcher")
-    
+
     watchers[req.path] = watcher
-    
+
     def process_watch_results():
-        """Background thread to process watcher results."""
         while watcher.is_running():
             results = watcher.get_last_results()
             for result in results:
@@ -341,44 +269,44 @@ def watch_start(req: WatchRequest):
                             print(f"[WATCH] Saved analysis for {file_path}")
                     elif result.get("type") == "error":
                         print(f"[WATCH] Error analyzing {result.get('path')}: {result.get('error')}")
-                except Exception as e:
-                    print(f"[WATCH] Failed to save results: {e}")
-            
+                except Exception as exc:
+                    print(f"[WATCH] Failed to save results: {exc}")
             time.sleep(0.1)
-    
+
     result_processor = threading.Thread(target=process_watch_results, daemon=True)
     result_processor.start()
-    
+
     return {
         "status": "started",
         "path": req.path,
-        "message": "Watch mode enabled. File changes will trigger automatic analysis."
+        "message": "Watch mode enabled. File changes will trigger automatic analysis.",
     }
+
 
 @app.post("/watch/stop")
 def watch_stop(req: WatchRequest):
-    """Stop watching a file or directory."""
     if req.path not in watchers:
         raise HTTPException(status_code=400, detail="No active watcher for this path")
-    
+
     watcher = watchers[req.path]
     if not watcher.stop():
         raise HTTPException(status_code=500, detail="Failed to stop watcher")
-    
+
     del watchers[req.path]
     return {
         "status": "stopped",
         "path": req.path,
-        "message": "Watch mode disabled."
+        "message": "Watch mode disabled.",
     }
+
 
 @app.get("/watch/status")
 def watch_status():
-    """Get status of all active watchers."""
     return {
         "active_watchers": len(watchers),
-        "watched_paths": list(watchers.keys())
+        "watched_paths": list(watchers.keys()),
     }
+
 
 @app.get("/file/content")
 def get_file_content(path: str):
@@ -386,15 +314,17 @@ def get_file_content(path: str):
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
+        with open(file_path, "r", encoding="utf-8") as handle:
+            content = handle.read()
         return {"content": content}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error reading file: {exc}") from exc
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
 
 def normalize_response(result: dict, mode: str, target: str) -> dict:
     findings = []
@@ -415,24 +345,31 @@ def normalize_response(result: dict, mode: str, target: str) -> dict:
                 "confidence": v.get("l2_confidence", 0.0),
                 "reasoning": v.get("reasoning_verdict", ""),
                 "attack_scenario": v.get("l3_attack_scenario", ""),
-                "fix_suggestion": v.get("fix_suggestion", "")
+                "fix_suggestion": v.get("fix_suggestion", ""),
             },
             "l3_validation": {
                 "validated": v.get("l3_validated", False),
                 "exploit_possible": v.get("exploit_possible", False),
                 "confidence": v.get("l3_confidence", 0.0),
                 "evidence": v.get("evidence", ""),
-                "recommended_fix": v.get("fix_suggestion", "")
-            }
+                "recommended_fix": v.get("fix_suggestion", ""),
+            },
         }
         findings.append(finding)
-    
+
     summary = result.get("aggregate_summary", {})
     top_risky_files = sorted(
-        [(f, len([v for v in result.get("vuln_records", []) if v.get("file_path") == f])) for f in set(v.get("file_path") for v in result.get("vuln_records", []))],
-        key=lambda x: x[1], reverse=True
+        [
+            (
+                file_path,
+                len([v for v in result.get("vuln_records", []) if v.get("file_path") == file_path]),
+            )
+            for file_path in set(v.get("file_path") for v in result.get("vuln_records", []))
+        ],
+        key=lambda item: item[1],
+        reverse=True,
     )[:5]
-    
+
     return {
         "target": target,
         "mode": mode,
@@ -442,7 +379,8 @@ def normalize_response(result: dict, mode: str, target: str) -> dict:
             "critical": summary.get("risk_distribution", {}).get("P1", 0),
             "high": summary.get("risk_distribution", {}).get("P2", 0),
             "medium": summary.get("risk_distribution", {}).get("P3", 0),
-            "low": summary.get("risk_distribution", {}).get("P4", 0) + summary.get("risk_distribution", {}).get("INFO", 0),
-            "top_risky_files": top_risky_files
-        }
+            "low": summary.get("risk_distribution", {}).get("P4", 0)
+            + summary.get("risk_distribution", {}).get("INFO", 0),
+            "top_risky_files": top_risky_files,
+        },
     }
