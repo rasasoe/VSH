@@ -6,6 +6,7 @@ import DetailPanel from './components/DetailPanel';
 import CodePreview from './components/CodePreview';
 import SettingsPage from './components/SettingsPage';
 import SetupWizard from './components/SetupWizard';
+import ErrorBoundary from './components/ErrorBoundary';
 
 declare global {
   interface Window {
@@ -58,7 +59,14 @@ interface Finding {
 function App() {
   const [path, setPath] = useState('');
   const [findings, setFindings] = useState<Finding[]>([]);
-  const [summary, setSummary] = useState<any>({});
+  const [summary, setSummary] = useState<any>({
+    total: 0,
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    top_risky_files: []
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
@@ -122,10 +130,34 @@ function App() {
     setError('');
     try {
       const res = await axios.post(`${API_BASE}/scan/${mode}`, { path });
-      setFindings(res.data.findings);
-      setSummary(res.data.summary);
+      const data = res.data || {};
+      const findings = data.findings || [];
+      const summary = data.summary || {};
+      
+      setFindings(findings);
+      setSummary({
+        total: summary.total || 0,
+        critical: summary.critical || 0,
+        high: summary.high || 0,
+        medium: summary.medium || 0,
+        low: summary.low || 0,
+        top_risky_files: summary.top_risky_files || []
+      });
+      
+      if (!findings.length) {
+        setError('');
+      }
     } catch (e: any) {
-      setError(e.response?.data?.detail || 'Scan failed');
+      setError(e.response?.data?.detail || e.message || 'Scan failed');
+      setSummary({
+        total: 0,
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        top_risky_files: []
+      });
+      setFindings([]);
     }
     setLoading(false);
   };
@@ -161,15 +193,24 @@ function App() {
   };
 
   if (view === 'wizard') {
-    return <SetupWizard apiBase={API_BASE} onComplete={onWizardComplete} />;
+    return (
+      <ErrorBoundary>
+        <SetupWizard apiBase={API_BASE} onComplete={onWizardComplete} />
+      </ErrorBoundary>
+    );
   }
 
   if (view === 'settings') {
-    return <SettingsPage apiBase={API_BASE} onBack={() => setView('scanner')} />;
+    return (
+      <ErrorBoundary>
+        <SettingsPage apiBase={API_BASE} onBack={() => setView('scanner')} />
+      </ErrorBoundary>
+    );
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: 'Arial, sans-serif' }}>
+    <ErrorBoundary>
+      <div style={{ display: 'flex', height: '100vh', fontFamily: 'Arial, sans-serif' }}>
       <div style={{ position: 'absolute', top: 12, right: 20, zIndex: 10 }}>
         <button onClick={() => setView('settings')} style={{ padding: '8px 12px', marginRight: 6 }}>⚙️ Settings</button>
         <button onClick={() => setView('scanner')} style={{ padding: '8px 12px' }}>🔙 Scanner</button>
@@ -368,7 +409,8 @@ function App() {
           100% { transform: rotate(360deg); }
         }
       `}</style>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
 

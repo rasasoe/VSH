@@ -10,7 +10,7 @@ import threading
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any, TYPE_CHECKING
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class L3BackgroundRunner:
     """L3 파이프라인을 비동기 백그라운드 스레드에서 관리"""
 
-    def __init__(self, shared_db=None):
+    def __init__(self, shared_db: Optional[Any] = None):
         """
         Args:
             shared_db: SharedDB adapter (L3 결과 저장용)
@@ -105,7 +105,7 @@ class L3BackgroundRunner:
         Returns:
             bool: 스레드 시작 성공 여부
         """
-        if not self.pipeline:
+        if self.pipeline is None:
             logger.debug("L3 pipeline not initialized. Skipping L3.")
             return False
 
@@ -186,10 +186,10 @@ class L3BackgroundRunner:
 
 
 # 전역 인스턴스 (API/CLI에서 사용)
-_l3_runner: Optional[L3BackgroundRunner] = None
+_l3_runner: Optional['L3BackgroundRunner'] = None
 
 
-def get_l3_runner(shared_db=None) -> L3BackgroundRunner:
+def get_l3_runner(shared_db: Optional[Any] = None) -> L3BackgroundRunner:
     """싱글톤 L3Runner 획득"""
     global _l3_runner
     if _l3_runner is None:
@@ -197,7 +197,7 @@ def get_l3_runner(shared_db=None) -> L3BackgroundRunner:
     return _l3_runner
 
 
-def initialize_l3(shared_db=None) -> bool:
+def initialize_l3(shared_db: Optional[Any] = None) -> bool:
     """L3 초기화"""
     runner = get_l3_runner(shared_db)
     return runner.initialize()

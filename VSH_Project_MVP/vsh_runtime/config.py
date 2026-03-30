@@ -8,6 +8,7 @@ VSH 전체 환경 설정 관리
 import os
 import json
 from pathlib import Path
+from typing import Any
 from dotenv import load_dotenv
 import logging
 
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # 기본 설정 (환경변수 기반)
-DEFAULT_CONFIG = {
+DEFAULT_CONFIG: dict[str, Any] = {
     "app": {
         "version": "1.0.0",
         "name": "VSH",
@@ -86,12 +87,12 @@ DEFAULT_CONFIG = {
 }
 
 
-def load_env_config() -> dict:
+def load_env_config() -> dict[str, Any]:
     """환경변수 기반 설정 반환"""
     return DEFAULT_CONFIG.copy()
 
 
-def load_file_config(config_file: str = ".vsh/config.json") -> dict:
+def load_file_config(config_file: str = ".vsh/config.json") -> dict[str, Any]:
     """파일에서 설정 로드 (없으면 기본값)"""
     if Path(config_file).exists():
         try:
@@ -106,7 +107,7 @@ def load_file_config(config_file: str = ".vsh/config.json") -> dict:
         return load_env_config()
 
 
-def save_config(config: dict, config_file: str = ".vsh/config.json") -> bool:
+def save_config(config: dict[str, Any], config_file: str = ".vsh/config.json") -> bool:
     """설정 저장"""
     try:
         config_path = Path(config_file)
@@ -122,7 +123,7 @@ def save_config(config: dict, config_file: str = ".vsh/config.json") -> bool:
         return False
 
 
-def get_config() -> dict:
+def get_config() -> dict[str, Any]:
     """현재 설정 반환"""
     return load_file_config()
 
@@ -152,14 +153,14 @@ def is_poc_enabled() -> bool:
     return get_config().get("l3", {}).get("poc", {}).get("enabled", True)
 
 
-def validate_config(config: dict) -> tuple[bool, str]:
+def validate_config(config: dict[str, Any]) -> tuple[bool, str]:
     """
     설정 검증
     
     Returns:
         (valid: bool, message: str)
     """
-    errors = []
+    errors: list[str] = []
     
     # L2 활성화 시 LLM 키 확인
     if config.get("llm", {}).get("enable_l2"):

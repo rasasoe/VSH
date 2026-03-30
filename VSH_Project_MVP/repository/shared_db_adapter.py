@@ -75,9 +75,9 @@ class SharedDBAdapter:
                     record_dict = record.model_dump() if hasattr(record, 'model_dump') else record.__dict__
                     vuln_id = record_dict.get('vuln_id')
                     
-                    # 중복 제거 (vuln_id 기준)
+                    # 중복 제거 (vuln_id 기줄)
                     self._vulns = [v for v in self._vulns if v.get('vuln_id') != vuln_id]
-                    self._vulns.append(record_dict)
+                    self._vulns.append(dict(record_dict))
                     
                     logger.debug(f"Wrote vuln {vuln_id} to SharedDB")
                     
@@ -87,7 +87,7 @@ class SharedDBAdapter:
                     
                     # 중복 제거 (package_id 기준)
                     self._packages = [p for p in self._packages if p.get('package_id') != package_id]
-                    self._packages.append(record_dict)
+                    self._packages.append(dict(record_dict))
                     
                     logger.debug(f"Wrote package {package_id} to SharedDB")
                 
@@ -96,7 +96,7 @@ class SharedDBAdapter:
             except Exception as e:
                 logger.error(f"Failed to write record to SharedDB: {e}")
 
-    async def read_all_vuln(self) -> List['VulnRecord']:
+    async def read_all_vuln(self) -> List[VulnRecord]:
         """
         L3 AbstractSharedDB 계약 구현
         저장된 모든 취약점 조회
@@ -107,7 +107,7 @@ class SharedDBAdapter:
         async with self._lock:
             try:
                 # dict → VulnRecord 변환
-                result = []
+                result: list[VulnRecord] = []
                 for v in self._vulns:
                     try:
                         # VulnRecord 생성 (실패 시 skip)
@@ -124,7 +124,7 @@ class SharedDBAdapter:
                 logger.error(f"Failed to read vulns from SharedDB: {e}")
                 return []
 
-    async def read_all_package(self) -> List['PackageRecord']:
+    async def read_all_package(self) -> List[PackageRecord]:
         """
         L3 AbstractSharedDB 계약 구현
         저장된 모든 패키지 조회
@@ -135,7 +135,7 @@ class SharedDBAdapter:
         async with self._lock:
             try:
                 # dict → PackageRecord 변환
-                result = []
+                result: list[PackageRecord] = []
                 for p in self._packages:
                     try:
                         pkg = PackageRecord(**p)
@@ -151,7 +151,7 @@ class SharedDBAdapter:
                 logger.error(f"Failed to read packages from SharedDB: {e}")
                 return []
 
-    async def get_all(self) -> Dict[str, List]:
+    async def get_all(self) -> Dict[str, list[Dict[str, Any]]]:
         """
         현재 저장소의 모든 데이터 반환 (리포트 생성용)
         

@@ -106,15 +106,15 @@ if not exist "!VENV_DIR!" (
   echo [VSH] ✓ venv 생성 완료
 )
 
-REM venv 활성화
-echo [VSH] venv 활성화...
-call "!VENV_DIR!\Scripts\activate.bat"
-if !errorlevel! neq 0 (
-  echo [VSH] ERROR: venv 활성화 실패
+REM venv 활성화 (PowerShell에서 활성화 문제 회피)
+echo [VSH] venv 설정...
+if not exist "!VENV_DIR!\Scripts\python.exe" (
+  echo [VSH] ERROR: venv python.exe 찾을 수 없음
   pause
   exit /b 4
 )
-echo [VSH] ✓ venv 활성화됨
+set "PATH=!VENV_DIR!\Scripts;!PATH!"
+echo [VSH] ✓ venv 경로 설정됨
 
 REM Python 의존성 설치
 echo [VSH] Python 의존성 설치 중... (첫 실행 시 1-2분 걸릴 수 있습니다)
@@ -138,19 +138,31 @@ if !errorlevel! neq 0 (
   exit /b 6
 )
 
-npm install --no-audit --no-fund --loglevel=error --legacy-peer-deps >nul 2>&1
+REM npm install 단계별 실행 (타임아웃 방지)
+echo [VSH] npm cache clean...
+timeout /t 2 /nobreak >nul
+
+npm cache clean --force 2>nul >nul
+if !errorlevel! neq 0 (
+  echo [VSH] WARNING: npm cache clean 내부 에러 무시됨
+)
+
+echo [VSH] npm install (--legacy-peer-deps)...
+npm install --no-audit --no-fund --loglevel=error --legacy-peer-deps --prefer-offline --no-package-lock >nul 2>&1
+
 if !errorlevel! neq 0 (
   echo [VSH] WARNING: npm install 실패. 재시도 중...
+  timeout /t 2 /nobreak >nul
   npm cache clean --force >nul 2>&1
-  npm install --no-audit --no-fund --loglevel=error --legacy-peer-deps >nul 2>&1
+  npm install --no-audit --no-fund --loglevel=error --legacy-peer-deps --prefer-offline --no-package-lock >nul 2>&1
   if !errorlevel! neq 0 (
-    echo [VSH] ERROR: npm install 최종 실패
+    echo [VSH] ERROR: npm install 최종 실패. C:\VSH_TEST\vsh_desktop/package.json 확인
     cd /d "!PROJECT_DIR!"
     pause
     exit /b 7
   )
 )
-echo [VSH] ✓ Node.js 의존성 설치 완료
+echo [VSH] OK npm 의존성 설치 완료
 
 REM API 서버 시작
 echo.
