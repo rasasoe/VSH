@@ -3,9 +3,10 @@
 import asyncio
 import logging
 import os
-import subprocess
 import threading
 from typing import Any, Optional
+
+from shared.runtime_settings import get_effective_l3_status
 
 logger = logging.getLogger(__name__)
 
@@ -21,18 +22,9 @@ class L3BackgroundRunner:
 
     def initialize(self) -> bool:
         try:
-            try:
-                result = subprocess.run(
-                    ["docker", "--version"],
-                    capture_output=True,
-                    timeout=2,
-                    text=True,
-                )
-                if result.returncode != 0:
-                    logger.warning("Docker is unavailable. L3 is disabled.")
-                    return False
-            except (FileNotFoundError, subprocess.TimeoutExpired):
-                logger.warning("Docker is not installed. L3 is disabled.")
+            l3_status = get_effective_l3_status()
+            if not l3_status["enabled"]:
+                logger.warning("L3 is disabled: %s", l3_status["reason"])
                 return False
 
             from l3.mock_shared_db import MockSharedDB

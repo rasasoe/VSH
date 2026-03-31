@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List, Dict
 from l3.models.package_record import PackageRecord
 from l3.providers.base import AbstractSBOMProvider
+from shared.runtime_settings import detect_syft
 
 class RealSBOMProvider(AbstractSBOMProvider):
 
@@ -50,9 +51,13 @@ class RealSBOMProvider(AbstractSBOMProvider):
 
     def _run_syft(self, project_path: str) -> List[dict]:
         try:
+            syft_info = detect_syft()
+            syft_cmd = syft_info.get("path") or "syft"
+            if not syft_info.get("installed"):
+                return []
             scan_dir = str(Path(project_path).parent)
             result = subprocess.run(
-                ["syft", scan_dir, "-o", "json"],
+                [syft_cmd, scan_dir, "-o", "json"],
                 capture_output=True, text=True, timeout=60
             )
             data = json.loads(result.stdout)

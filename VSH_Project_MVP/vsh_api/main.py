@@ -13,7 +13,9 @@ from repository.shared_db_adapter import get_shared_db
 from shared.runtime_settings import (
     CONFIG_PATH,
     apply_runtime_env,
+    detect_semgrep,
     detect_syft,
+    get_effective_l3_status,
     get_effective_llm_status,
     load_config,
     save_config,
@@ -34,12 +36,20 @@ watchers: dict[str, ProjectWatcher] = {}
 
 shared_db = get_shared_db()
 l3_runner = get_l3_runner(shared_db)
-l3_enabled = initialize_l3(shared_db)
+l3_enabled = False
 
-if l3_enabled:
-    logger.info("L3 pipeline enabled")
-else:
-    logger.warning("L3 disabled. L1/L2 analysis remains available.")
+
+def refresh_l3_state() -> bool:
+    global l3_enabled
+    l3_enabled = initialize_l3(shared_db)
+    if l3_enabled:
+        logger.info("L3 pipeline enabled")
+    else:
+        logger.warning("L3 disabled. L1/L2 analysis remains available.")
+    return l3_enabled
+
+
+refresh_l3_state()
 
 
 class ScanRequest(BaseModel):
@@ -176,6 +186,7 @@ def get_settings():
 def post_settings(config: dict):
     saved = save_config(config)
     apply_runtime_env(saved)
+    refresh_l3_state()
     return {"status": "ok", "settings": saved}
 
 
@@ -195,21 +206,27 @@ def check_syft(settings: dict):
     return {"syft": detect_syft({"tools": settings})}
 
 
+@app.post("/settings/check-semgrep")
+def check_semgrep(settings: dict):
+    return {"semgrep": detect_semgrep({"tools": settings})}
+
+
 @app.get("/system/status")
 def system_status():
     config = load_config()
     llm_status = get_effective_llm_status(config)
     syft_info = detect_syft(config)
+    semgrep_info = detect_semgrep(config)
+    l3_status = get_effective_l3_status(config)
     shared_db_path = getattr(shared_db, "db_file", None)
     chroma_path = Path(CHROMA_DB_DIR)
     sqlite_path = Path(SQLITE_DB_PATH)
     chroma_ready = chroma_path.exists() and any(chroma_path.iterdir())
-    l3_available = bool(l3_enabled and llm_status["enable_l3"])
-    l3_reason = "initialized" if l3_available else "disabled or missing dependencies"
 
     return {
         "api_server": "running",
         "python_core": "ready",
+        "semgrep": semgrep_info,
         "syft": syft_info,
         "llm": llm_status,
         "l2": {
@@ -219,10 +236,7 @@ def system_status():
             "rag_mode": "automatic",
             "reason": "VSH uses the local Chroma runtime database automatically when it is available.",
         },
-        "l3": {
-            "enabled": l3_available,
-            "reason": l3_reason,
-        },
+        "l3": l3_status,
         "shared_db": {
             "path": str(shared_db_path) if shared_db_path else None,
             "exists": bool(shared_db_path and Path(shared_db_path).exists()),

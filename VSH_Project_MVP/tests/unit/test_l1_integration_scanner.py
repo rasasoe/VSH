@@ -1,7 +1,9 @@
 from models.vulnerability import Vulnerability
 from orchestration.pipeline_factory import PipelineFactory
 from layer1.scanner import VSHL1Scanner
+from layer1.scanner.semgrep_cli_scanner import SemgrepCLIScanner
 from shared.finding_dedup import deduplicate_findings
+from shared.runtime_settings import detect_semgrep, get_effective_l3_status
 
 
 def test_vsh_l1_scanner_detects_pattern_and_typosquatting(tmp_path):
@@ -201,3 +203,60 @@ def test_mixed_language_detection_project(tmp_path):
     assert "python" in langs
     assert "javascript" in langs
 
+
+def test_detect_semgrep_respects_manual_override(tmp_path):
+    fake = tmp_path / "semgrep.exe"
+    fake.write_text("", encoding="utf-8")
+
+    detected = detect_semgrep({"tools": {"semgrep_path": str(fake), "semgrep_auto_detect": False}})
+
+    assert detected["installed"] is True
+    assert detected["path"] == str(fake)
+    assert detected["source"] == "manual"
+
+
+def test_semgrep_cli_scanner_parses_results():
+    scanner = SemgrepCLIScanner()
+
+    findings = scanner._parse_results(
+        {
+            "results": [
+                {
+                    "path": "sample.py",
+                    "check_id": "vsh.python.eval",
+                    "start": {"line": 3},
+                    "extra": {
+                        "message": "Direct eval() use can lead to code injection.",
+                        "lines": "eval(user_input)",
+                        "metadata": {
+                            "cwe_id": "CWE-95",
+                            "severity": "CRITICAL",
+                            "references": ["OWASP Code Injection Prevention"],
+                            "engine": "semgrep_cli",
+                            "title": "eval() use",
+                        },
+                    },
+                }
+            ]
+        }
+    )
+
+    assert len(findings) == 1
+    assert findings[0].cwe_id == "CWE-95"
+    assert findings[0].severity == "CRITICAL"
+    assert findings[0].metadata["engine"] == "semgrep_cli"
+
+
+def test_l3_status_requires_sonar_token(monkeypatch):
+    monkeypatch.delenv("SONAR_TOKEN", raising=False)
+    monkeypatch.delenv("SONARQUBE_TOKEN", raising=False)
+
+    status = get_effective_l3_status(
+        {
+            "llm": {"enable_l3": True},
+            "l3": {"sonar_project_key": "demo-project", "sonar_token": ""},
+        }
+    )
+
+    assert status["enabled"] is False
+    assert "SONAR_TOKEN" in status["reason"]

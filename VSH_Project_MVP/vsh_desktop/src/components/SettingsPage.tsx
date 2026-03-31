@@ -18,6 +18,14 @@ const defaultConfig = {
   tools: {
     syft_path: '',
     syft_auto_detect: true,
+    semgrep_path: '',
+    semgrep_auto_detect: true,
+  },
+  l3: {
+    sonar_url: 'https://sonarcloud.io',
+    sonar_token: '',
+    sonar_org: '',
+    sonar_project_key: 'vsh-local',
   },
   scan: {
     watch_on_save: true,
@@ -55,6 +63,7 @@ function SettingsPage({ apiBase, onBack }: SettingsPageProps) {
   const [activeTab, setActiveTab] = useState('AI');
   const [llmTestResult, setLlmTestResult] = useState('');
   const [syftResult, setSyftResult] = useState('');
+  const [semgrepResult, setSemgrepResult] = useState('');
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -156,6 +165,23 @@ function SettingsPage({ apiBase, onBack }: SettingsPageProps) {
     } catch {
       setSyftResult('Syft check failed.');
       setError('Syft check failed.');
+    }
+  };
+
+  const checkSemgrep = async () => {
+    try {
+      const body = {
+        semgrep_path: config.tools.semgrep_path,
+        semgrep_auto_detect: config.tools.semgrep_auto_detect,
+      };
+      const res = await axios.post(`${apiBase}/settings/check-semgrep`, body);
+      const semgrepState = res.data.semgrep;
+      const pathLabel = semgrepState.path || 'no path';
+      setSemgrepResult(`Semgrep ${semgrepState.installed ? 'ready' : 'not found'} | ${semgrepState.source} | ${pathLabel}`);
+      setError('');
+    } catch {
+      setSemgrepResult('Semgrep check failed.');
+      setError('Semgrep check failed.');
     }
   };
 
@@ -272,6 +298,25 @@ function SettingsPage({ apiBase, onBack }: SettingsPageProps) {
             </div>
 
             <div style={sectionStyle}>
+              <h3 style={{ marginTop: 0 }}>Semgrep Detection</h3>
+              <p style={{ color: '#4b5563' }}>
+                VSH can call the real Semgrep CLI when it is installed. If Semgrep is missing, VSH falls back to the built-in heuristic L1 engine.
+              </p>
+              <div style={{ marginBottom: 10 }}>
+                <label>Override Semgrep path:&nbsp;</label>
+                <input value={config.tools.semgrep_path} onChange={(e) => updateConfig(['tools', 'semgrep_path'], e.target.value)} style={{ width: 420 }} placeholder="Leave blank for auto-detect" />
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label>Auto detect Semgrep:&nbsp;</label>
+                <input type="checkbox" checked={config.tools.semgrep_auto_detect} onChange={(e) => updateConfig(['tools', 'semgrep_auto_detect'], e.target.checked)} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button onClick={checkSemgrep} style={{ padding: '6px 12px' }}>Check Semgrep</button>
+                <span>{semgrepResult || `Current status: ${status.semgrep?.installed ? 'ready' : 'not found'}`}</span>
+              </div>
+            </div>
+
+            <div style={sectionStyle}>
               <h3 style={{ marginTop: 0 }}>Syft Detection</h3>
               <p style={{ color: '#4b5563' }}>
                 Syft is treated as an optional local CLI. VSH auto-detects it when installed. Use the path field only if you want to override auto-detection.
@@ -288,6 +333,33 @@ function SettingsPage({ apiBase, onBack }: SettingsPageProps) {
                 <button onClick={checkSyft} style={{ padding: '6px 12px' }}>Check Syft</button>
                 <span>{syftResult || `Current status: ${status.syft?.installed ? 'ready' : 'not found'}`}</span>
               </div>
+            </div>
+
+            <div style={sectionStyle}>
+              <h3 style={{ marginTop: 0 }}>L3 / Sonar Setup</h3>
+              <p style={{ color: '#4b5563' }}>
+                L3 becomes ready only when Docker and Sonar credentials are both available. Saving these settings re-checks the backend immediately.
+              </p>
+              <div style={{ marginBottom: 10 }}>
+                <label>Sonar URL:&nbsp;</label>
+                <input value={config.l3.sonar_url} onChange={(e) => updateConfig(['l3', 'sonar_url'], e.target.value)} style={{ width: 420 }} />
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label>Sonar Token:&nbsp;</label>
+                <input type="password" value={config.l3.sonar_token} onChange={(e) => updateConfig(['l3', 'sonar_token'], e.target.value)} style={{ width: 420 }} />
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label>Sonar Org:&nbsp;</label>
+                <input value={config.l3.sonar_org} onChange={(e) => updateConfig(['l3', 'sonar_org'], e.target.value)} style={{ width: 320 }} />
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label>Sonar Project Key:&nbsp;</label>
+                <input value={config.l3.sonar_project_key} onChange={(e) => updateConfig(['l3', 'sonar_project_key'], e.target.value)} style={{ width: 320 }} />
+              </div>
+              <label>
+                <input type="checkbox" checked={config.llm.enable_l3} onChange={(e) => updateConfig(['llm', 'enable_l3'], e.target.checked)} />
+                &nbsp;Enable L3 pipeline
+              </label>
             </div>
 
             <div style={sectionStyle}>
@@ -351,8 +423,11 @@ function SettingsPage({ apiBase, onBack }: SettingsPageProps) {
             <div>LLM Requested: {status.llm?.requested_provider || 'unknown'}</div>
             <div>LLM Effective: {status.llm?.provider || 'unknown'} ({status.llm?.connected ? 'ready' : 'needs key'})</div>
             <div>L2 Reasoning: {status.l2?.enabled ? 'enabled' : 'disabled'} | {status.l2?.rag_mode || 'unknown'}</div>
+            <div>Semgrep: {status.semgrep?.installed ? 'installed' : 'not found'} ({status.semgrep?.path || 'N/A'})</div>
             <div>Syft: {status.syft?.installed ? 'installed' : 'not found'} ({status.syft?.path || 'N/A'})</div>
             <div>L3 Pipeline: {status.l3?.enabled ? 'enabled' : 'disabled'} ({status.l3?.reason || 'unknown'})</div>
+            <div>Docker: {status.l3?.docker?.installed ? 'installed' : 'not ready'} ({status.l3?.docker?.path || 'N/A'})</div>
+            <div>Sonar: {status.l3?.sonar?.has_token ? 'token configured' : 'token missing'} | {status.l3?.sonar?.url || 'N/A'} | {status.l3?.sonar?.project_key || 'N/A'}</div>
             <div>Shared DB: {status.shared_db?.path || 'N/A'}</div>
             <div>SQLite DB: {status.sqlite?.path || 'N/A'} ({status.sqlite?.exists ? 'ready' : 'missing'})</div>
             <div>Chroma DB: {status.chroma?.path || 'N/A'} ({status.chroma?.status || 'unknown'})</div>

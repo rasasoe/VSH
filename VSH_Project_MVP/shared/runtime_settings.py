@@ -4,6 +4,7 @@ import copy
 import json
 import os
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,14 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "tools": {
         "syft_path": "",
         "syft_auto_detect": True,
+        "semgrep_path": "",
+        "semgrep_auto_detect": True,
+    },
+    "l3": {
+        "sonar_url": "https://sonarcloud.io",
+        "sonar_token": "",
+        "sonar_org": "",
+        "sonar_project_key": "vsh-local",
     },
     "scan": {
         "watch_on_save": True,
@@ -84,10 +93,18 @@ def normalize_config(config: dict[str, Any] | None) -> dict[str, Any]:
     tools = merged.setdefault("tools", {})
     tools["syft_path"] = str(tools.get("syft_path", "") or "").strip()
     tools["syft_auto_detect"] = bool(tools.get("syft_auto_detect", True))
+    tools["semgrep_path"] = str(tools.get("semgrep_path", "") or "").strip()
+    tools["semgrep_auto_detect"] = bool(tools.get("semgrep_auto_detect", True))
 
     scan = merged.setdefault("scan", {})
     scan["exclude_dirs"] = list(scan.get("exclude_dirs") or [])
     scan["include_extensions"] = list(scan.get("include_extensions") or [])
+
+    l3 = merged.setdefault("l3", {})
+    l3["sonar_url"] = str(l3.get("sonar_url") or "https://sonarcloud.io").strip() or "https://sonarcloud.io"
+    l3["sonar_token"] = str(l3.get("sonar_token") or "").strip()
+    l3["sonar_org"] = str(l3.get("sonar_org") or "").strip()
+    l3["sonar_project_key"] = str(l3.get("sonar_project_key") or "vsh-local").strip() or "vsh-local"
 
     merged.setdefault("system", {})["config_version"] = DEFAULT_CONFIG["system"]["config_version"]
     return merged
@@ -120,6 +137,22 @@ def _env_gemini_key() -> str:
 
 def _env_openai_key() -> str:
     return os.environ.get("OPENAI_API_KEY", "")
+
+
+def _env_sonar_token() -> str:
+    return os.environ.get("SONAR_TOKEN") or os.environ.get("SONARQUBE_TOKEN", "")
+
+
+def _env_sonar_url() -> str:
+    return os.environ.get("SONAR_URL") or os.environ.get("SONARQUBE_URL", "https://sonarcloud.io")
+
+
+def _env_sonar_org() -> str:
+    return os.environ.get("SONAR_ORG") or os.environ.get("SONARQUBE_ORG", "")
+
+
+def _env_sonar_project_key() -> str:
+    return os.environ.get("SONAR_PROJECT_KEY") or os.environ.get("SONARQUBE_PROJECT_KEY", "vsh-local")
 
 
 def get_effective_llm_status(config: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -170,9 +203,17 @@ def apply_runtime_env(config: dict[str, Any] | None = None) -> dict[str, Any]:
     cfg = normalize_config(config)
     llm_status = get_effective_llm_status(cfg)
     llm = cfg.get("llm", {})
+    tools = cfg.get("tools", {})
+    l3 = cfg.get("l3", {})
 
     gemini_key = str(llm.get("gemini_api_key") or "").strip()
     openai_key = str(llm.get("openai_api_key") or "").strip()
+    sonar_token = str(l3.get("sonar_token") or _env_sonar_token()).strip()
+    sonar_url = str(l3.get("sonar_url") or _env_sonar_url()).strip()
+    sonar_org = str(l3.get("sonar_org") or _env_sonar_org()).strip()
+    sonar_project_key = str(l3.get("sonar_project_key") or _env_sonar_project_key()).strip()
+    syft_path = str(tools.get("syft_path") or "").strip()
+    semgrep_path = str(tools.get("semgrep_path") or "").strip()
 
     if gemini_key:
         os.environ["GEMINI_API_KEY"] = gemini_key
@@ -181,17 +222,39 @@ def apply_runtime_env(config: dict[str, Any] | None = None) -> dict[str, Any]:
         os.environ["OPENAI_API_KEY"] = openai_key
     if llm.get("model"):
         os.environ["GEMINI_MODEL"] = str(llm["model"])
+    if sonar_token:
+        os.environ["SONAR_TOKEN"] = sonar_token
+        os.environ["SONARQUBE_TOKEN"] = sonar_token
+    if sonar_url:
+        os.environ["SONAR_URL"] = sonar_url
+        os.environ["SONARQUBE_URL"] = sonar_url
+    if sonar_org:
+        os.environ["SONAR_ORG"] = sonar_org
+        os.environ["SONARQUBE_ORG"] = sonar_org
+    if sonar_project_key:
+        os.environ["SONAR_PROJECT_KEY"] = sonar_project_key
+        os.environ["SONARQUBE_PROJECT_KEY"] = sonar_project_key
+    if syft_path:
+        os.environ["SYFT_PATH"] = syft_path
+    if semgrep_path:
+        os.environ["SEMGREP_PATH"] = semgrep_path
 
     os.environ["LLM_PROVIDER"] = llm_status["provider"]
     return llm_status
 
 
-def detect_syft(config: dict[str, Any] | None = None) -> dict[str, Any]:
+def _detect_cli_tool(
+    config: dict[str, Any] | None,
+    manual_key: str,
+    auto_key: str,
+    env_key: str,
+    binary_name: str,
+) -> dict[str, Any]:
     cfg = normalize_config(config)
     tools = cfg.get("tools", {})
 
-    manual_path = str(tools.get("syft_path") or "").strip()
-    auto_detect = bool(tools.get("syft_auto_detect", True))
+    manual_path = str(tools.get(manual_key) or os.environ.get(env_key, "")).strip()
+    auto_detect = bool(tools.get(auto_key, True))
     found_path = ""
     source = "missing"
 
@@ -199,7 +262,7 @@ def detect_syft(config: dict[str, Any] | None = None) -> dict[str, Any]:
         found_path = manual_path
         source = "manual"
     elif auto_detect:
-        detected = shutil.which("syft")
+        detected = shutil.which(binary_name)
         if detected:
             found_path = detected
             source = "auto"
@@ -209,4 +272,77 @@ def detect_syft(config: dict[str, Any] | None = None) -> dict[str, Any]:
         "path": found_path,
         "source": source,
         "auto_detect": auto_detect,
+    }
+
+
+def detect_syft(config: dict[str, Any] | None = None) -> dict[str, Any]:
+    return _detect_cli_tool(config, "syft_path", "syft_auto_detect", "SYFT_PATH", "syft")
+
+
+def detect_semgrep(config: dict[str, Any] | None = None) -> dict[str, Any]:
+    return _detect_cli_tool(config, "semgrep_path", "semgrep_auto_detect", "SEMGREP_PATH", "semgrep")
+
+
+def _docker_status() -> dict[str, Any]:
+    docker_path = shutil.which("docker")
+    if not docker_path:
+        return {"installed": False, "path": "", "reason": "docker not found in PATH"}
+
+    try:
+        result = subprocess.run(
+            [docker_path, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except Exception as exc:
+        return {"installed": False, "path": docker_path, "reason": f"docker check failed: {exc}"}
+
+    if result.returncode != 0:
+        return {"installed": False, "path": docker_path, "reason": "docker command returned a non-zero exit code"}
+
+    return {"installed": True, "path": docker_path, "reason": (result.stdout or result.stderr).strip()}
+
+
+def get_effective_l3_status(config: dict[str, Any] | None = None) -> dict[str, Any]:
+    cfg = normalize_config(config)
+    llm = cfg.get("llm", {})
+    l3 = cfg.get("l3", {})
+    docker = _docker_status()
+
+    enabled_by_user = bool(llm.get("enable_l3", True))
+    sonar_token = str(l3.get("sonar_token") or _env_sonar_token()).strip()
+    sonar_url = str(l3.get("sonar_url") or _env_sonar_url()).strip()
+    sonar_org = str(l3.get("sonar_org") or _env_sonar_org()).strip()
+    sonar_project_key = str(l3.get("sonar_project_key") or _env_sonar_project_key()).strip()
+
+    reasons: list[str] = []
+    if not enabled_by_user:
+        reasons.append("L3 is disabled in settings.")
+    if not docker["installed"]:
+        reasons.append("Docker is required for Sonar scanner and PoC execution.")
+    if not sonar_token:
+        reasons.append("SONAR_TOKEN is not configured.")
+    if not sonar_project_key:
+        reasons.append("SONAR project key is not configured.")
+
+    ready = enabled_by_user and docker["installed"] and bool(sonar_token) and bool(sonar_project_key)
+    if ready:
+        reason = "L3 is ready: Docker and Sonar credentials are available."
+    else:
+        reason = " ".join(reasons) if reasons else "L3 is not ready."
+
+    return {
+        "enabled": ready,
+        "enabled_by_user": enabled_by_user,
+        "reason": reason,
+        "docker": docker,
+        "sonar": {
+            "configured": bool(sonar_token),
+            "has_token": bool(sonar_token),
+            "url": sonar_url,
+            "org": sonar_org,
+            "project_key": sonar_project_key,
+        },
     }

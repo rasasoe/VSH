@@ -13,10 +13,10 @@ from l3.llm.base import LLMAdapter
 class RealSonarQubeProvider(AbstractSonarQubeProvider):
     def __init__(self, llm: LLMAdapter):
         self.llm = llm
-        self.sonar_url = os.getenv("SONAR_URL", "https://sonarcloud.io")
-        self.sonar_token = os.getenv("SONAR_TOKEN")
-        self.sonar_org = os.getenv("SONAR_ORG")
-        self.sonar_project_key = os.getenv("SONAR_PROJECT_KEY")
+        self.sonar_url = os.getenv("SONAR_URL") or os.getenv("SONARQUBE_URL", "https://sonarcloud.io")
+        self.sonar_token = os.getenv("SONAR_TOKEN") or os.getenv("SONARQUBE_TOKEN")
+        self.sonar_org = os.getenv("SONAR_ORG") or os.getenv("SONARQUBE_ORG")
+        self.sonar_project_key = os.getenv("SONAR_PROJECT_KEY") or os.getenv("SONARQUBE_PROJECT_KEY")
         self.auth = HTTPBasicAuth(self.sonar_token, "")
 
     async def scan(self, project_path: str) -> list[VulnRecord]:

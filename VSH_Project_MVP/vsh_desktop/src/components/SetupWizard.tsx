@@ -19,6 +19,14 @@ function SetupWizard({ apiBase, onComplete }: SetupWizardProps) {
     tools: {
       syft_path: '',
       syft_auto_detect: true,
+      semgrep_path: '',
+      semgrep_auto_detect: true,
+    },
+    l3: {
+      sonar_url: 'https://sonarcloud.io',
+      sonar_token: '',
+      sonar_org: '',
+      sonar_project_key: 'vsh-local',
     },
     scan: {
       watch_on_save: true,
@@ -48,6 +56,7 @@ function SetupWizard({ apiBase, onComplete }: SetupWizardProps) {
               <li>Python and Node.js are required.</li>
               <li>SQLite and Chroma runtime storage are automatic.</li>
               <li>LLM API keys are optional and only needed for live reasoning.</li>
+              <li>Semgrep and Syft are optional local CLIs that VSH can auto-detect.</li>
               <li>Syft is auto-detected if installed.</li>
             </ul>
             <button onClick={next}>Next</button>
@@ -85,7 +94,15 @@ function SetupWizard({ apiBase, onComplete }: SetupWizardProps) {
         return (
           <div>
             <h2>Local Runtime</h2>
-            <p>Chroma RAG and SQLite are automatic. Syft is optional and auto-detected, but you can override the path if needed.</p>
+            <p>Chroma RAG and SQLite are automatic. Semgrep and Syft are optional CLIs and can be auto-detected or manually pointed to.</p>
+            <div style={{ marginBottom: 8 }}>
+              <label>Override Semgrep path:&nbsp;</label>
+              <input value={config.tools.semgrep_path} onChange={(e) => setConfig((c: any) => ({ ...c, tools: { ...c.tools, semgrep_path: e.target.value } }))} style={{ width: 360 }} placeholder="Leave blank for auto-detect" />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Auto detect Semgrep:&nbsp;</label>
+              <input type="checkbox" checked={config.tools.semgrep_auto_detect} onChange={(e) => setConfig((c: any) => ({ ...c, tools: { ...c.tools, semgrep_auto_detect: e.target.checked } }))} />
+            </div>
             <div style={{ marginBottom: 8 }}>
               <label>Override Syft path:&nbsp;</label>
               <input value={config.tools.syft_path} onChange={(e) => setConfig((c: any) => ({ ...c, tools: { ...c.tools, syft_path: e.target.value } }))} style={{ width: 360 }} placeholder="Leave blank for auto-detect" />
@@ -103,7 +120,7 @@ function SetupWizard({ apiBase, onComplete }: SetupWizardProps) {
       case 4:
         return (
           <div>
-            <h2>Default Scan Behavior</h2>
+            <h2>Scan and L3 Defaults</h2>
             <div style={{ marginBottom: 8 }}>
               <label>Watch on Save:&nbsp;</label>
               <input type="checkbox" checked={config.scan.watch_on_save} onChange={(e) => setConfig((c: any) => ({ ...c, scan: { ...c.scan, watch_on_save: e.target.checked } }))} />
@@ -115,6 +132,26 @@ function SetupWizard({ apiBase, onComplete }: SetupWizardProps) {
             <div style={{ marginBottom: 8 }}>
               <label>Enable SBOM when Syft is available:&nbsp;</label>
               <input type="checkbox" checked={config.scan.enable_sbom} onChange={(e) => setConfig((c: any) => ({ ...c, scan: { ...c.scan, enable_sbom: e.target.checked } }))} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Enable L3 pipeline:&nbsp;</label>
+              <input type="checkbox" checked={config.llm.enable_l3} onChange={(e) => setConfig((c: any) => ({ ...c, llm: { ...c.llm, enable_l3: e.target.checked } }))} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Sonar URL:&nbsp;</label>
+              <input value={config.l3.sonar_url} onChange={(e) => setConfig((c: any) => ({ ...c, l3: { ...c.l3, sonar_url: e.target.value } }))} style={{ width: 360 }} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Sonar Token:&nbsp;</label>
+              <input type="password" value={config.l3.sonar_token} onChange={(e) => setConfig((c: any) => ({ ...c, l3: { ...c.l3, sonar_token: e.target.value } }))} style={{ width: 360 }} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Sonar Org:&nbsp;</label>
+              <input value={config.l3.sonar_org} onChange={(e) => setConfig((c: any) => ({ ...c, l3: { ...c.l3, sonar_org: e.target.value } }))} style={{ width: 360 }} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label>Sonar Project Key:&nbsp;</label>
+              <input value={config.l3.sonar_project_key} onChange={(e) => setConfig((c: any) => ({ ...c, l3: { ...c.l3, sonar_project_key: e.target.value } }))} style={{ width: 360 }} />
             </div>
             <div style={{ marginTop: 12 }}>
               <button onClick={prev}>Back</button>

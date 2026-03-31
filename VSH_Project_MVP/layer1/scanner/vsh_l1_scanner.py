@@ -14,21 +14,24 @@ from layer1.common import (
 )
 from models.scan_result import ScanResult
 from models.vulnerability import Vulnerability
+from repository.knowledge_repo import MockKnowledgeRepo
 from repository.base_repository import BaseReadRepository
 from shared.contracts import BaseScanner
 from shared.finding_dedup import deduplicate_findings
 from .mock_semgrep_scanner import MockSemgrepScanner
+from .semgrep_cli_scanner import SemgrepCLIScanner
 from .sbom_scanner import SBOMScanner
 
 
 class VSHL1Scanner(BaseScanner):
     def __init__(self, knowledge_repo: BaseReadRepository | None = None):
-        self.knowledge_repo = knowledge_repo
-        self.pattern_scanner = MockSemgrepScanner(knowledge_repo=knowledge_repo) if knowledge_repo else None
+        self.knowledge_repo = knowledge_repo or MockKnowledgeRepo()
+        self.semgrep_scanner = SemgrepCLIScanner(knowledge_repo=self.knowledge_repo)
+        self.pattern_scanner = MockSemgrepScanner(knowledge_repo=self.knowledge_repo)
         self.sbom_scanner = SBOMScanner()
         try:
             from .treesitter_scanner import TreeSitterScanner
-            self.tree_sitter_scanner = TreeSitterScanner(knowledge_repo=knowledge_repo) if knowledge_repo else None
+            self.tree_sitter_scanner = TreeSitterScanner(knowledge_repo=self.knowledge_repo)
         except ModuleNotFoundError:
             self.tree_sitter_scanner = None
 
@@ -61,7 +64,9 @@ class VSHL1Scanner(BaseScanner):
 
     def _scan_single_file_findings(self, path: Path, language: str) -> List[Vulnerability]:
         findings: List[Vulnerability] = []
-        if self.pattern_scanner is not None and language == "python":
+        if language in {"python", "javascript", "typescript"}:
+            findings.extend(self.semgrep_scanner.scan(str(path)).findings)
+        if language == "python":
             findings.extend(self.pattern_scanner.scan(str(path)).findings)
         if self.tree_sitter_scanner is not None and language == "python":
             findings.extend(self.tree_sitter_scanner.scan(str(path)).findings)
