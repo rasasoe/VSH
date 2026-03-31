@@ -268,12 +268,29 @@ VSH는 계층형 구조를 따릅니다.
 - `Semgrep`, `Syft`, `Docker`, `Sonar`, `L3 readiness` 상태를 `/system/status`로 노출
 - Settings 화면에서 `Check Semgrep`, `Check Syft`, Sonar URL/Token/Project Key 설정 가능
 - 저장 후 L3 상태 즉시 재평가
+- L2 상세 패널이 backend reasoning 값을 그대로 표시하도록 API 응답 매핑 보정
+- Dashboard severity 카드가 risk priority가 아니라 실제 `CRITICAL/HIGH/MEDIUM/LOW` 개수를 표시하도록 수정
 
 관련 파일:
 
 - [`VSH_Project_MVP/shared/runtime_settings.py`](VSH_Project_MVP/shared/runtime_settings.py)
 - [`VSH_Project_MVP/vsh_api/main.py`](VSH_Project_MVP/vsh_api/main.py)
 - [`VSH_Project_MVP/vsh_desktop/src/components/SettingsPage.tsx`](VSH_Project_MVP/vsh_desktop/src/components/SettingsPage.tsx)
+
+### 데스크톱 시연 UX
+
+- `Annotate File`, `Annotate Project` 버튼 추가
+- annotated 결과를 `.vsh/annotated/`에 저장하고 앱 안에서 preview 확인 가능
+- 파일 선택기에서 Python 전용 필터 대신 `All Files`와 `Security Source Files` 그룹을 제공해 다언어 파일 선택 가능
+- 프로젝트 annotate 시 `.vsh` 산출물을 다시 입력으로 스캔하지 않도록 제외 처리
+
+관련 파일:
+
+- [`VSH_Project_MVP/vsh_desktop/src/App.tsx`](VSH_Project_MVP/vsh_desktop/src/App.tsx)
+- [`VSH_Project_MVP/vsh_desktop/main.js`](VSH_Project_MVP/vsh_desktop/main.js)
+- [`VSH_Project_MVP/vsh_desktop/main.ts`](VSH_Project_MVP/vsh_desktop/main.ts)
+- [`VSH_Project_MVP/vsh_runtime/engine.py`](VSH_Project_MVP/vsh_runtime/engine.py)
+- [`VSH_Project_MVP/layer1/scanner/vsh_l1_scanner.py`](VSH_Project_MVP/layer1/scanner/vsh_l1_scanner.py)
 
 ### L3 / Sonar
 
@@ -300,8 +317,11 @@ VSH는 계층형 구조를 따릅니다.
 ### 데스크톱 중심 분석 흐름
 
 - Electron 앱에서 파일/프로젝트 선택
+- 파일 선택기에서 `All Files`, `Security Source Files`, `Python Files`, `JavaScript / TypeScript` 필터 지원
 - `Scan File`, `Scan Project` 실행
 - Dashboard, Findings Table, Detail Panel, Code Preview 제공
+- `Annotate File`, `Annotate Project`로 주석이 삽입된 preview 생성
+- L2 reasoning / confidence / attack scenario가 상세 패널에 실제 값으로 표시
 - JSON 리포트 Export 지원
 
 ### FastAPI 백엔드
@@ -312,6 +332,8 @@ VSH는 계층형 구조를 따릅니다.
 - `GET /system/status`
 - `POST /scan/file`
 - `POST /scan/project`
+- `POST /annotate/file`
+- `POST /annotate/project`
 - `POST /watch/start`
 - `POST /watch/stop`
 - `GET /watch/status`
@@ -446,11 +468,15 @@ python -m scripts.setup_local_sonarqube
 5. `Scan Project` 클릭
 6. Dashboard 확인
 7. Findings 항목 클릭 후 Detail / Code Preview 확인
+8. `Annotate Project` 클릭
+9. 보라색 annotation preview 영역과 `.vsh/annotated/` 산출물 확인
 
 현재 구현 기준 동작 차이:
 
 - `Scan File`: 단일 파일 결과를 같은 Dashboard/Findings 영역에 표시
 - `Scan Project`: 프로젝트 전체 결과를 같은 Dashboard/Findings 영역에 표시
+- `Annotate File`: 단일 파일에 대한 주석형 preview를 생성
+- `Annotate Project`: 프로젝트 내 탐지 파일들을 `.vsh/annotated/`에 저장하고 preview를 보여줌
 - `Watch`: 백엔드 감시는 시작하지만 프런트 대시보드는 자동 갱신되지 않음
 
 ## 런타임 DB 구조
