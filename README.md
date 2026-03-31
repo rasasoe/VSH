@@ -37,6 +37,11 @@ VSH는 이 간극을 줄이는 것을 목표로 합니다.
 - SQLite / Chroma 런타임 DB 사용
 - LLM 키 없이도 mock reasoning으로 동작
 - Docker / Sonar 없이도 기본 분석 가능
+- 실제 `Semgrep` CLI 연동 가능
+- 실제 `Syft` CLI 연동 가능
+- Windows에서 `Semgrep` / `Syft`를 Docker wrapper로 우회 실행 가능
+- 로컬 `SonarQube` Docker 서버를 이용한 완전 로컬 L3 구성 가능
+- 샘플 프로젝트 기준 로컬 SonarQube 스캔 검증 완료
 
 현재 샘플 프로젝트 기준 검출 수:
 
@@ -167,6 +172,129 @@ VSH는 계층형 구조를 따릅니다.
 
 > 현재 VSH L1은 실제 Semgrep CLI와 직접 구현한 휴리스틱 탐지 계층을 함께 쓰는 하이브리드 L1이며, Semgrep의 핵심 아이디어를 팀이 이해하고 파이프라인에 흡수하기 위해 만든 직접구현 엔진도 계속 유지합니다.
 
+## 직접구현 휴리스틱이 무엇을 보충하는가
+
+지금 L1에서 `Semgrep`을 붙였다고 해서 직접구현 계층이 의미를 잃은 것은 아닙니다. 현재 직접구현 휴리스틱은 아래 역할을 보충합니다.
+
+### 1. reachability annotation
+
+[`VSH_Project_MVP/layer1/common/reachability.py`](/a:/VSH-main/VSH_Project_MVP/layer1/common/reachability.py) 는 source/sink 패턴과 간단한 함수 호출 그래프를 이용해 다음 상태를 붙입니다.
+
+- `reachable`
+- `conditionally_reachable`
+- `unknown`
+- `unreachable`
+
+즉 `Semgrep`이 “패턴이 존재한다”를 잘 잡는다면, VSH 휴리스틱은 “사용자 입력이 실제 sink까지 닿는 코드 구조로 보이느냐”를 추가로 표현합니다.
+
+### 2. knowledge 기반 custom rule 보조
+
+[`VSH_Project_MVP/layer1/scanner/mock_semgrep_scanner.py`](/a:/VSH-main/VSH_Project_MVP/layer1/scanner/mock_semgrep_scanner.py) 는 `knowledge.json`의 rule을 line-by-line으로 순회합니다.
+
+이 계층은:
+
+- 내부 지식 저장소 기반 룰 실험
+- Semgrep 설치 여부와 무관한 최소 탐지선 확보
+- 레포 내부에서 수정 비용이 낮은 custom rule 유지
+
+에 유리합니다.
+
+### 3. hard-coded pattern rule 보강
+
+[`VSH_Project_MVP/layer1/common/pattern_scan.py`](/a:/VSH-main/VSH_Project_MVP/layer1/common/pattern_scan.py) 는 Python/JS/TS에 대해 VSH 내부 룰셋을 돌립니다.
+
+예:
+
+- `eval()`
+- `os.system()`
+- `subprocess(..., shell=True)`
+- `document.write()`
+- `innerHTML`
+
+이 계층은 빠르고 설명 가능성이 높아서, 데모와 반복 시연에 여전히 강합니다.
+
+### 4. Tree-sitter 구조 보조
+
+`TreeSitterScanner`는 현재 주력 엔진은 아니지만, 문자열 정규식보다 구조적인 힌트를 일부 보강합니다.
+
+### 5. typosquatting / 공급망 보조 신호
+
+[`VSH_Project_MVP/layer1/common/import_risk.py`](/a:/VSH-main/VSH_Project_MVP/layer1/common/import_risk.py) 기반으로 import 이름 유사도와 알려진 패키지 이름을 비교해 typosquatting 가능성을 탐지합니다. 이건 일반적인 코드 패턴 취약점과는 다른 축의 신호입니다.
+
+### 6. SBOM / 패키지 보강
+
+`SBOMScanner`와 `Syft` 연계를 통해 코드 취약점 외에도:
+
+- 취약 버전 패키지
+- dependency 관점 리스크
+- package record
+
+를 별도 축으로 수집합니다.
+
+정리하면 현재 L1은:
+
+- `Semgrep CLI`가 syntax-aware rule matching을 담당하고
+- VSH 휴리스틱이 reachability, custom rule, typosquatting, SBOM, 후단 스키마 정규화를 보강하는 구조입니다.
+
+## 지금까지 실제로 반영된 작업
+
+최근까지 이 레포에 실제 반영된 큰 작업은 아래와 같습니다.
+
+### L1 / Semgrep
+
+- 실제 `Semgrep CLI` 호출 추가
+- `Semgrep` 미설치 시 내부 휴리스틱으로 폴백
+- `Semgrep`, `pattern_scan`, `MockSemgrep`, `Tree-sitter`, `reachability`를 합치는 하이브리드 L1 구성
+- Windows에서 직접 설치형 `semgrep.exe`가 불안정할 때를 대비해 Docker wrapper 추가
+
+관련 파일:
+
+- [`VSH_Project_MVP/layer1/scanner/semgrep_cli_scanner.py`](/a:/VSH-main/VSH_Project_MVP/layer1/scanner/semgrep_cli_scanner.py)
+- [`VSH_Project_MVP/tools/semgrep-docker.cmd`](/a:/VSH-main/VSH_Project_MVP/tools/semgrep-docker.cmd)
+
+### Syft / SBOM
+
+- `Syft`를 Python 라이브러리가 아니라 로컬 CLI로 취급하도록 정리
+- 경로 자동 감지와 수동 override 추가
+- Docker wrapper 추가
+
+관련 파일:
+
+- [`VSH_Project_MVP/tools/syft-docker.cmd`](/a:/VSH-main/VSH_Project_MVP/tools/syft-docker.cmd)
+- [`VSH_Project_MVP/l3/providers/sbom/real.py`](/a:/VSH-main/VSH_Project_MVP/l3/providers/sbom/real.py)
+
+### 설정 / 상태 노출
+
+- `Semgrep`, `Syft`, `Docker`, `Sonar`, `L3 readiness` 상태를 `/system/status`로 노출
+- Settings 화면에서 `Check Semgrep`, `Check Syft`, Sonar URL/Token/Project Key 설정 가능
+- 저장 후 L3 상태 즉시 재평가
+
+관련 파일:
+
+- [`VSH_Project_MVP/shared/runtime_settings.py`](/a:/VSH-main/VSH_Project_MVP/shared/runtime_settings.py)
+- [`VSH_Project_MVP/vsh_api/main.py`](/a:/VSH-main/VSH_Project_MVP/vsh_api/main.py)
+- [`VSH_Project_MVP/vsh_desktop/src/components/SettingsPage.tsx`](/a:/VSH-main/VSH_Project_MVP/vsh_desktop/src/components/SettingsPage.tsx)
+
+### L3 / Sonar
+
+- SonarCloud token 기반 L3 연결 정리
+- GitHub import 없이도 로컬 폴더를 Sonar 대상으로 돌릴 수 있는 방향으로 정리
+- 로컬 `SonarQube` Docker 서버 자동 부트스트랩 스크립트 추가
+- 로컬 SonarQube에서는 `organization` 없이도 프로젝트 생성/조회 가능하도록 provider 수정
+- Docker scanner 컨테이너에서 `127.0.0.1` 대신 `host.docker.internal`을 쓰도록 보강
+
+관련 파일:
+
+- [`VSH_Project_MVP/scripts/setup_local_sonarqube.py`](/a:/VSH-main/VSH_Project_MVP/scripts/setup_local_sonarqube.py)
+- [`VSH_Project_MVP/l3/providers/sonarqube/real.py`](/a:/VSH-main/VSH_Project_MVP/l3/providers/sonarqube/real.py)
+
+검증 결과:
+
+- 로컬 SonarQube 서버 `http://127.0.0.1:9000` 구동 확인
+- `vsh-local` 프로젝트 생성 확인
+- 샘플 프로젝트에 대해 실제 로컬 SonarQube 스캔 수행
+- 이슈 `8`건 수집 확인
+
 ## 주요 기능
 
 ### 데스크톱 중심 분석 흐름
@@ -284,6 +412,28 @@ $env:VSH_AUTO_START_API='false'
 Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
 .\node_modules\electron\dist\electron.exe .
 ```
+
+## 완전 로컬 L3
+
+기본 VSH 스캔은 원래부터 GitHub 레포 연결 없이 로컬 파일/폴더를 바로 분석합니다. 여기에 `L3`까지 완전히 로컬로 붙이고 싶다면 로컬 `SonarQube`를 Docker로 띄우면 됩니다.
+
+이미 자동 부트스트랩 스크립트가 포함되어 있습니다.
+
+```powershell
+cd VSH_Project_MVP
+python -m scripts.setup_local_sonarqube
+```
+
+이 스크립트는:
+
+1. `sonarqube:community` Docker 이미지를 pull
+2. `vsh-sonarqube` 컨테이너 실행
+3. `http://127.0.0.1:9000` 준비될 때까지 대기
+4. 로컬 Sonar 토큰 생성
+5. `vsh-local` 프로젝트 생성
+6. VSH 설정 파일에 URL / token / project key 저장
+
+즉 SonarCloud 계정 없이도 로컬 SonarQube만으로 L3를 붙일 수 있습니다.
 
 ## 데스크톱 사용 흐름
 
@@ -453,7 +603,6 @@ VSH는 이 전제를 기준으로:
 
 우선순위 높은 다음 단계:
 
-- 실제 Semgrep CLI 연동 또는 구조적 규칙 엔진 강화
 - 실제 Semgrep CLI와 내부 휴리스틱 엔진 간 rule parity 확장
 - Tree-sitter 기반 구조 탐지 범위 확장
 - watch 결과의 실시간 UI 반영
