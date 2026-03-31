@@ -178,7 +178,7 @@ VSH는 계층형 구조를 따릅니다.
 
 ### 1. reachability annotation
 
-[`VSH_Project_MVP/layer1/common/reachability.py`](/a:/VSH-main/VSH_Project_MVP/layer1/common/reachability.py) 는 source/sink 패턴과 간단한 함수 호출 그래프를 이용해 다음 상태를 붙입니다.
+[`VSH_Project_MVP/layer1/common/reachability.py`](VSH_Project_MVP/layer1/common/reachability.py) 는 source/sink 패턴과 간단한 함수 호출 그래프를 이용해 다음 상태를 붙입니다.
 
 - `reachable`
 - `conditionally_reachable`
@@ -189,7 +189,7 @@ VSH는 계층형 구조를 따릅니다.
 
 ### 2. knowledge 기반 custom rule 보조
 
-[`VSH_Project_MVP/layer1/scanner/mock_semgrep_scanner.py`](/a:/VSH-main/VSH_Project_MVP/layer1/scanner/mock_semgrep_scanner.py) 는 `knowledge.json`의 rule을 line-by-line으로 순회합니다.
+[`VSH_Project_MVP/layer1/scanner/mock_semgrep_scanner.py`](VSH_Project_MVP/layer1/scanner/mock_semgrep_scanner.py) 는 `knowledge.json`의 rule을 line-by-line으로 순회합니다.
 
 이 계층은:
 
@@ -201,7 +201,7 @@ VSH는 계층형 구조를 따릅니다.
 
 ### 3. hard-coded pattern rule 보강
 
-[`VSH_Project_MVP/layer1/common/pattern_scan.py`](/a:/VSH-main/VSH_Project_MVP/layer1/common/pattern_scan.py) 는 Python/JS/TS에 대해 VSH 내부 룰셋을 돌립니다.
+[`VSH_Project_MVP/layer1/common/pattern_scan.py`](VSH_Project_MVP/layer1/common/pattern_scan.py) 는 Python/JS/TS에 대해 VSH 내부 룰셋을 돌립니다.
 
 예:
 
@@ -219,7 +219,7 @@ VSH는 계층형 구조를 따릅니다.
 
 ### 5. typosquatting / 공급망 보조 신호
 
-[`VSH_Project_MVP/layer1/common/import_risk.py`](/a:/VSH-main/VSH_Project_MVP/layer1/common/import_risk.py) 기반으로 import 이름 유사도와 알려진 패키지 이름을 비교해 typosquatting 가능성을 탐지합니다. 이건 일반적인 코드 패턴 취약점과는 다른 축의 신호입니다.
+[`VSH_Project_MVP/layer1/common/import_risk.py`](VSH_Project_MVP/layer1/common/import_risk.py) 기반으로 import 이름 유사도와 알려진 패키지 이름을 비교해 typosquatting 가능성을 탐지합니다. 이건 일반적인 코드 패턴 취약점과는 다른 축의 신호입니다.
 
 ### 6. SBOM / 패키지 보강
 
@@ -249,8 +249,8 @@ VSH는 계층형 구조를 따릅니다.
 
 관련 파일:
 
-- [`VSH_Project_MVP/layer1/scanner/semgrep_cli_scanner.py`](/a:/VSH-main/VSH_Project_MVP/layer1/scanner/semgrep_cli_scanner.py)
-- [`VSH_Project_MVP/tools/semgrep-docker.cmd`](/a:/VSH-main/VSH_Project_MVP/tools/semgrep-docker.cmd)
+- [`VSH_Project_MVP/layer1/scanner/semgrep_cli_scanner.py`](VSH_Project_MVP/layer1/scanner/semgrep_cli_scanner.py)
+- [`VSH_Project_MVP/tools/semgrep-docker.cmd`](VSH_Project_MVP/tools/semgrep-docker.cmd)
 
 ### Syft / SBOM
 
@@ -260,8 +260,8 @@ VSH는 계층형 구조를 따릅니다.
 
 관련 파일:
 
-- [`VSH_Project_MVP/tools/syft-docker.cmd`](/a:/VSH-main/VSH_Project_MVP/tools/syft-docker.cmd)
-- [`VSH_Project_MVP/l3/providers/sbom/real.py`](/a:/VSH-main/VSH_Project_MVP/l3/providers/sbom/real.py)
+- [`VSH_Project_MVP/tools/syft-docker.cmd`](VSH_Project_MVP/tools/syft-docker.cmd)
+- [`VSH_Project_MVP/l3/providers/sbom/real.py`](VSH_Project_MVP/l3/providers/sbom/real.py)
 
 ### 설정 / 상태 노출
 
@@ -271,9 +271,9 @@ VSH는 계층형 구조를 따릅니다.
 
 관련 파일:
 
-- [`VSH_Project_MVP/shared/runtime_settings.py`](/a:/VSH-main/VSH_Project_MVP/shared/runtime_settings.py)
-- [`VSH_Project_MVP/vsh_api/main.py`](/a:/VSH-main/VSH_Project_MVP/vsh_api/main.py)
-- [`VSH_Project_MVP/vsh_desktop/src/components/SettingsPage.tsx`](/a:/VSH-main/VSH_Project_MVP/vsh_desktop/src/components/SettingsPage.tsx)
+- [`VSH_Project_MVP/shared/runtime_settings.py`](VSH_Project_MVP/shared/runtime_settings.py)
+- [`VSH_Project_MVP/vsh_api/main.py`](VSH_Project_MVP/vsh_api/main.py)
+- [`VSH_Project_MVP/vsh_desktop/src/components/SettingsPage.tsx`](VSH_Project_MVP/vsh_desktop/src/components/SettingsPage.tsx)
 
 ### L3 / Sonar
 
@@ -285,8 +285,8 @@ VSH는 계층형 구조를 따릅니다.
 
 관련 파일:
 
-- [`VSH_Project_MVP/scripts/setup_local_sonarqube.py`](/a:/VSH-main/VSH_Project_MVP/scripts/setup_local_sonarqube.py)
-- [`VSH_Project_MVP/l3/providers/sonarqube/real.py`](/a:/VSH-main/VSH_Project_MVP/l3/providers/sonarqube/real.py)
+- [`VSH_Project_MVP/scripts/setup_local_sonarqube.py`](VSH_Project_MVP/scripts/setup_local_sonarqube.py)
+- [`VSH_Project_MVP/l3/providers/sonarqube/real.py`](VSH_Project_MVP/l3/providers/sonarqube/real.py)
 
 검증 결과:
 
@@ -479,7 +479,7 @@ C:\Users\<user>\.vsh\runtime_data
 
 팀원 설명용 별도 문서:
 
-- [`VSH_Project_MVP/docs/L1_SEMGREP_ALGORITHM_KR.md`](/a:/VSH-main/VSH_Project_MVP/docs/L1_SEMGREP_ALGORITHM_KR.md)
+- [`VSH_Project_MVP/docs/L1_SEMGREP_ALGORITHM_KR.md`](VSH_Project_MVP/docs/L1_SEMGREP_ALGORITHM_KR.md)
 
 이 문서에는 아래가 포함됩니다.
 
