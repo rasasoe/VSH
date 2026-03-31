@@ -4,6 +4,7 @@ import subprocess
 import uuid
 import time
 from datetime import datetime,timezone
+from urllib.parse import urlparse, urlunparse
 import requests
 from requests.auth import HTTPBasicAuth
 from l3.providers.base import AbstractSonarQubeProvider
@@ -65,12 +66,26 @@ class RealSonarQubeProvider(AbstractSonarQubeProvider):
 
     async def _ensure_project(self) -> None:
         try:
+            search_url = f"{self.sonar_url}/api/projects/search"
+            search_params = {"projects": self.sonar_project_key}
+            if self.sonar_org:
+                search_params["organization"] = self.sonar_org
+            search_response = await asyncio.to_thread(
+                lambda: requests.get(search_url, params=search_params, auth=self.auth, timeout=10)
+            )
+            if search_response.status_code == 200:
+                payload = search_response.json()
+                if payload.get("paging", {}).get("total", 0) > 0:
+                    print("[L3 SonarQube] 프로젝트 이미 존재, skip")
+                    return
+
             url = f"{self.sonar_url}/api/projects/create"
             data = {
                 "name": self.sonar_project_key,
                 "project": self.sonar_project_key,
-                "organization": self.sonar_org
             }
+            if self.sonar_org:
+                data["organization"] = self.sonar_org
             response = await asyncio.to_thread(
                 lambda: requests.post(url, data=data, auth=self.auth, timeout=10)
             )
@@ -93,20 +108,31 @@ class RealSonarQubeProvider(AbstractSonarQubeProvider):
             return f"/{drive_letter}{rest}"
         return os.path.abspath(path)
 
+    def _docker_reachable_sonar_url(self) -> str:
+        parsed = urlparse(self.sonar_url)
+        if parsed.hostname in {"127.0.0.1", "localhost"}:
+            return urlunparse(parsed._replace(netloc=f"host.docker.internal:{parsed.port or 9000}"))
+        return self.sonar_url
+
     async def _run_scanner(self, project_path: str) -> bool:
         try:
             docker_path = self._to_docker_path(project_path)
+            scanner_url = self._docker_reachable_sonar_url()
+            scanner_args = [
+                f"-Dsonar.host.url={scanner_url}",
+                f"-Dsonar.token={self.sonar_token}",
+                f"-Dsonar.projectKey={self.sonar_project_key}",
+                "-Dsonar.sources=.",
+            ]
+            if self.sonar_org:
+                scanner_args.append(f"-Dsonar.organization={self.sonar_org}")
             cmd = [
                 "docker", "run", "--rm",
-                "-e", f"SONAR_HOST_URL={self.sonar_url}",
+                "-e", f"SONAR_HOST_URL={scanner_url}",
                 "-e", f"SONAR_TOKEN={self.sonar_token}",
-                "-e", f"SONAR_SCANNER_OPTS="
-                      f"-Dsonar.projectKey={self.sonar_project_key} "
-                      f"-Dsonar.organization={self.sonar_org} "
-                      f"-Dsonar.sources=.",
                 "-v", f"{docker_path}:/usr/src",
-                "sonarsource/sonar-scanner-cli"
-            ]
+                "sonarsource/sonar-scanner-cli",
+            ] + scanner_args
             result = await asyncio.to_thread(
                 lambda: subprocess.run(
                     cmd, capture_output=True, text=True, timeout=300
@@ -165,8 +191,9 @@ class RealSonarQubeProvider(AbstractSonarQubeProvider):
             url = f"{self.sonar_url}/api/issues/search"
             params = {
                 "componentKeys": self.sonar_project_key,
-                "organization": self.sonar_org,
             }
+            if self.sonar_org:
+                params["organization"] = self.sonar_org
             response = await asyncio.to_thread(
                 lambda: requests.get(url, params=params, auth=self.auth, timeout=10)
             )
