@@ -1,463 +1,370 @@
-﻿# VSH
+# VSH
 
-> Desktop-first Application Security Verification Platform
+<div align="center">
 
-VSH는 정적 탐지, 추론, 심화 검증 흐름을 하나의 데스크톱 경험으로 묶기 위해 만든 보안 분석 프로젝트입니다. FastAPI 백엔드와 Electron 데스크톱 UI를 중심으로 구성되어 있으며, 로컬 환경만으로도 기본 분석이 가능하고, 필요 시 LLM·Sonar·Docker 같은 외부 요소를 단계적으로 확장할 수 있습니다.
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f172a,45:2563eb,100:22c55e&height=180&section=header&text=VSH&fontSize=64&fontColor=ffffff&animation=fadeIn&fontAlignY=36&desc=Desktop-first%20Application%20Security%20Verification%20Platform&descAlignY=58&descAlign=50" alt="VSH banner" />
 
-## 왜 VSH인가
+<br />
 
-보안 도구는 흔히 다음 둘 중 하나에 치우칩니다.
+<b>AI 코드 생성 시대를 위한 데스크톱 중심 보안 분석 플랫폼</b>
 
-- 탐지는 빠르지만 결과 설명과 후속 판단이 약함
-- 검증은 깊지만 실행 환경이 무겁고 시연/운영이 어려움
+<br />
+<br />
 
-VSH는 이 간극을 줄이는 것을 목표로 합니다.
+[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)](#)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)](#)
+[![Electron](https://img.shields.io/badge/Electron-Desktop-47848F?style=for-the-badge&logo=electron&logoColor=white)](#)
+[![React](https://img.shields.io/badge/React-UI-61DAFB?style=for-the-badge&logo=react&logoColor=111111)](#)
+[![Security](https://img.shields.io/badge/Security-SAST%20%2B%20SBOM%20%2B%20L3-ef4444?style=for-the-badge)](#)
 
-- L1에서 빠르게 후보 취약점을 찾고
-- L2에서 그 결과를 설명 가능하게 정리하고
-- L3에서 가능한 경우 Sonar/SBOM/PoC 검증으로 더 깊게 들어갑니다.
+</div>
 
-즉, “탐지에서 끝나는 도구”가 아니라 “검토와 설명, 그리고 확장 가능한 검증 흐름”까지 포함한 데스크톱 제품 경험을 지향합니다.
+---
 
-## 핵심 가치
+## Table of Contents
 
-- 빠른 실행: Python + Node.js만으로 기본 동작 가능
-- 데스크톱 중심 UX: 파일 선택, 프로젝트 스캔, 상세 패널, 코드 프리뷰 제공
-- 점진적 확장: API 키, Sonar, Docker를 붙이면 상위 계층 확장 가능
-- 설명 가능성: 단순 검출 수치가 아니라 reasoning과 fix suggestion까지 연결
-- 데모 친화성: 빈 상태로 앱을 열고 사용자가 직접 프로젝트를 선택하는 흐름 지원
+- [1. What is VSH?](#1-what-is-vsh)
+- [2. Core Value](#2-core-value)
+- [3. Architecture](#3-architecture)
+- [4. Layer Design](#4-layer-design)
+- [5. Key Features](#5-key-features)
+- [6. Repository Structure](#6-repository-structure)
+- [7. Quick Start](#7-quick-start)
+- [8. Manual Run](#8-manual-run)
+- [9. Desktop Demo Flow](#9-desktop-demo-flow)
+- [10. API Reference](#10-api-reference)
+- [11. Configuration](#11-configuration)
+- [12. Semgrep, Syft, SonarQube](#12-semgrep-syft-sonarqube)
+- [13. Runtime Data](#13-runtime-data)
+- [14. Demo Target](#14-demo-target)
+- [15. Troubleshooting](#15-troubleshooting)
+- [16. Current Limitations](#16-current-limitations)
+- [17. Roadmap](#17-roadmap)
 
-## 현재 상태
+---
 
-현재 레포는 시연 가능한 데스크톱 안정화 상태입니다.
+## 1. What is VSH?
 
-- FastAPI 백엔드 실행 가능
-- Electron 데스크톱 빌드 가능
-- `tests/fixtures/vuln_project` 스캔 가능
-- SQLite / Chroma 런타임 DB 사용
-- LLM 키 없이도 mock reasoning으로 동작
-- Docker / Sonar 없이도 기본 분석 가능
-- 실제 `Semgrep` CLI 연동 가능
-- 실제 `Syft` CLI 연동 가능
-- Windows에서 `Semgrep` / `Syft`를 Docker wrapper로 우회 실행 가능
-- 로컬 `SonarQube` Docker 서버를 이용한 완전 로컬 L3 구성 가능
-- 샘플 프로젝트 기준 로컬 SonarQube 스캔 검증 완료
+**VSH(Vibe Secure Hook)** 는 AI 코드 생성 시대에 맞춰 설계한 **Desktop-first Application Security Verification Platform**입니다.
 
-현재 샘플 프로젝트 기준 검출 수:
+VSH는 단순히 취약점을 찾는 데서 끝나지 않습니다. 빠른 정적 탐지 결과를 LLM reasoning, SBOM, SonarQube, annotation preview와 연결하여 사용자가 다음 질문까지 바로 확인할 수 있도록 설계되었습니다.
 
-- 대상: `VSH_Project_MVP\tests\fixtures\vuln_project`
-- 검출 수: `5`
+> “어디가 위험한가?”  
+> “왜 위험한가?”  
+> “실제로 공격 가능성이 있는가?”  
+> “어떻게 고쳐야 하는가?”
 
-## 아키텍처 개요
+```text
+Select Project
+   → L1 Static Detection
+   → L2 Reasoning
+   → L3 Verification
+   → Desktop Dashboard
+   → Fix / Annotation Preview
+```
 
-VSH는 계층형 구조를 따릅니다.
+---
 
-- `L1`: 규칙 기반 정적 탐지와 기본 정규화
-- `L2`: 탐지 결과 보강, reasoning, attack scenario, fix suggestion
-- `L3`: Sonar / SBOM / PoC 검증을 위한 심화 경로
-- `Desktop UI`: Electron + React 기반 사용자 인터페이스
-- `Backend API`: FastAPI 기반 스캔/설정/상태 관리
+## 2. Core Value
 
-### 레이어별 역할
+| Value | Description |
+|---|---|
+| Desktop-first | CLI만 쓰는 도구가 아니라, Electron UI에서 프로젝트 선택부터 결과 확인까지 수행 |
+| Explainable Security | 단순 탐지 메시지가 아니라 reasoning, attack scenario, fix suggestion 제공 |
+| Hybrid L1 | 실제 Semgrep CLI와 내부 휴리스틱 탐지 계층을 함께 사용 |
+| Expandable L3 | SonarQube, SBOM, PoC 검증 경로로 심화 가능 |
+| Demo Friendly | Windows 로컬 환경에서 샘플 취약 프로젝트를 바로 스캔 가능 |
+| Offline-friendly Baseline | API 키 없이도 mock reasoning으로 기본 시연 가능 |
 
-#### L1
+---
 
-- 파일/프로젝트 단위 정적 분석
-- rule 기반 취약점 후보 검출
-- reachability 추정
-- 공통 스키마 `vuln_records`, `package_records` 생성
+## 3. Architecture
 
-#### L2
+### 3.1 System Overview
 
-- L1 결과를 바탕으로 reasoning 수행
-- mock 또는 실제 Gemini/OpenAI provider 사용
-- 취약 여부 보강, 공격 시나리오, 수정 가이드 생성
+```mermaid
+flowchart LR
+    User[User] --> Desktop[Electron Desktop UI]
+    Desktop --> API[FastAPI Backend]
+    API --> Engine[VSH Runtime Engine]
 
-#### L3
+    Engine --> L1[L1 Static Analysis]
+    Engine --> L2[L2 Reasoning]
+    Engine --> L3[L3 Verification]
 
-- Docker와 Sonar 설정이 준비되면 Sonar/SBOM/PoC 연계
-- 현재는 선택형 경로이며, 기본 실행에서는 없어도 동작
+    L1 --> Semgrep[Semgrep CLI]
+    L1 --> Pattern[Pattern Scan]
+    L1 --> Tree[Tree-sitter Assist]
+    L1 --> Reach[Reachability Heuristic]
 
-## L1을 왜 이렇게 구현했는가
+    L2 --> Mock[Mock Reasoning]
+    L2 --> Gemini[Gemini Provider]
+    L2 --> OpenAI[OpenAI Provider]
+    L2 --> RAG[RAG Context]
 
-처음 L1은 이름상 `Semgrep` 계층을 포함했지만, **실제 Semgrep CLI를 호출하지 않고 Semgrep 스타일 탐지기를 직접 구현한 상태**였습니다.
+    L3 --> Sonar[SonarQube]
+    L3 --> Syft[Syft SBOM]
+    L3 --> PoC[PoC Templates]
 
-이번 업데이트로 L1은 아래 두 축을 함께 사용하는 **하이브리드 구조**가 되었습니다.
+    Engine --> RuntimeDB[(SQLite / Chroma Runtime DB)]
+```
 
-- 실제 `Semgrep` CLI 호출 (`SemgrepCLIScanner`)
-- 직접 구현한 경량 규칙 엔진 (`MockSemgrepScanner`, `pattern_scan`, `TreeSitterScanner`, `reachability`)
+### 3.2 Data Flow
 
-즉 지금의 VSH L1은 “Semgrep을 버린 구조”도 아니고, “Semgrep만 black-box로 붙인 구조”도 아닙니다.
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant D as Desktop UI
+    participant A as FastAPI
+    participant E as Runtime Engine
+    participant L1 as L1 Scanner
+    participant L2 as L2 Reasoner
+    participant L3 as L3 Verifier
 
-- Semgrep이 설치되어 있으면 실제 바이너리를 호출해 structural/pattern rule 결과를 먼저 얻고
-- Semgrep이 없으면 기존 직접구현 L1이 계속 동작하며
-- 두 결과는 dedup과 normalize를 거쳐 동일한 `vuln_records` 스키마로 합쳐집니다.
+    U->>D: Select Project / File
+    D->>A: POST /scan/project
+    A->>E: Run analysis pipeline
+    E->>L1: Detect candidate vulnerabilities
+    L1-->>E: vuln_records / package_records
+    E->>L2: Enrich with reasoning
+    L2-->>E: confidence / scenario / fix
+    E->>L3: Optional deeper validation
+    L3-->>E: Sonar / SBOM / PoC signals
+    E-->>A: Normalized scan result
+    A-->>D: Dashboard data
+    D-->>U: Findings / Detail / Code Preview
+```
 
-직접 구현 계층은 여전히 아래 요소를 조합한 **Semgrep 스타일의 경량 정적 분석 계층**입니다.
+### 3.3 Layer Pipeline
 
-- `MockSemgrepScanner`
-- `SemgrepCLIScanner`
-- `pattern_scan`
-- `TreeSitterScanner` 보조 탐지
+```mermaid
+graph TD
+    A[Source Code] --> B[L1: Fast Detection]
+    B --> C{Finding?}
+    C -- No --> Z[Clean / No finding]
+    C -- Yes --> D[L2: Reasoning]
+    D --> E[L3: Optional Verification]
+    E --> F[Unified Finding Schema]
+    F --> G[Desktop Dashboard]
+    F --> H[JSON Report]
+    F --> I[Annotation Preview]
+```
+
+---
+
+## 4. Layer Design
+
+### L1. Static Analysis
+
+L1은 빠르게 취약점 후보를 찾고, 후속 L2/L3가 이해할 수 있는 공통 스키마로 정규화합니다.
+
+```mermaid
+flowchart TB
+    Code[Codebase] --> S1[Semgrep CLI]
+    Code --> S2[Internal Pattern Scan]
+    Code --> S3[MockSemgrep / Knowledge Rules]
+    Code --> S4[Tree-sitter Assist]
+    Code --> S5[Import Risk / Typosquatting]
+
+    S1 --> N[Normalize]
+    S2 --> N
+    S3 --> N
+    S4 --> N
+    S5 --> N
+
+    N --> R[Reachability Annotation]
+    R --> D[Deduplicate Findings]
+    D --> Out[vuln_records]
+```
+
+L1 구성 요소:
+
+- 실제 `Semgrep CLI` 호출
+- Semgrep 미설치 시 내부 휴리스틱 폴백
+- `pattern_scan` 기반 빠른 규칙 탐지
+- `TreeSitterScanner` 구조 보조
 - `reachability` annotation
-- `deduplicate_findings`
-- `normalize_scan_result`
+- `import_risk` 기반 typosquatting / 공급망 신호
+- SBOM package record 생성 경로
 
-이렇게 설계한 이유는 세 가지입니다.
+### L2. Reasoning
 
-### 1. Semgrep의 원리를 이해하고 내부화하기 위해
+L2는 L1의 탐지 결과를 사용자에게 설명 가능한 형태로 보강합니다.
 
-단순히 외부 도구를 붙이는 수준이 아니라, Semgrep이 가진 “규칙 기반 정적 탐지” 사고방식을 팀이 직접 소화하고 싶었습니다.
+| Field | Meaning |
+|---|---|
+| `reasoning` | 왜 위험한지 설명 |
+| `attack_scenario` | 가능한 공격 흐름 |
+| `fix_suggestion` | 수정 방향 |
+| `confidence` | 파이프라인 신호 기반 신뢰도 |
+| `provider` | mock / gemini / openai |
 
-즉:
+LLM API 키가 없어도 `mock` provider로 기본 데모가 가능합니다.
 
-- 어떤 식으로 규칙이 매칭되는지
-- 구조 기반 탐지와 문자열 기반 탐지의 차이가 무엇인지
-- false positive가 왜 생기는지
-- 후속 L2/L3와 연결할 때 어떤 스키마가 필요한지
+### L3. Verification
 
-이것을 팀이 직접 이해하기 위해 경량 구현을 만들었습니다.
+L3는 선택형 심화 검증 계층입니다.
 
-### 2. 우리 파이프라인에 맞게 제어하기 위해
+```mermaid
+flowchart LR
+    Finding[Finding] --> Sonar[SonarQube]
+    Finding --> SBOM[Syft SBOM]
+    Finding --> PoC[PoC Template]
+    Sonar --> Merge[Validation Signal]
+    SBOM --> Merge
+    PoC --> Merge
+    Merge --> UI[Desktop Detail Panel]
+```
 
-실제 제품에서는 탐지 결과가 바로 끝나는 것이 아니라,
+현재 L3는 다음 방향을 지원합니다.
 
-- reachability annotation
-- 공통 스키마 정규화
-- L2 reasoning 연결
-- L3 handoff
+- 로컬 SonarQube Docker 서버
+- Syft 기반 SBOM
+- CWE별 PoC template 확장 구조
 
-까지 자연스럽게 이어져야 했습니다. 현재 L1 구조는 이 후속 파이프라인에 맞게 직접 제어하기 쉽습니다.
+---
 
-### 3. 시연과 로컬 실행 안정성을 확보하기 위해
+## 5. Key Features
 
-실제 Semgrep CLI는 강력하지만, 외부 바이너리 의존성과 환경 차이, OS별 이슈를 동반합니다. 현재 프로젝트 단계에서는 “완전한 최종 탐지 엔진”보다 “빠르고 안정적으로 반복 실행 가능한 데모/개발 구조”가 더 중요했습니다.
+### Desktop UX
 
-## 실제 Semgrep과 현재 L1의 차이
+- 파일 / 프로젝트 선택
+- `Scan File`, `Scan Project`
+- Dashboard severity cards
+- Findings table
+- Detail panel
+- Code preview
+- `Annotate File`, `Annotate Project`
+- JSON export
+- Settings / system status
 
-### 실제 Semgrep
+### Backend API
 
-장점:
+- scan / annotate / watch / settings / system status API 제공
+- FastAPI 기반으로 Desktop과 분리
+- 런타임 DB와 분석 엔진 연결
 
-- AST 기반 구조적 패턴 매칭
-- 언어별 parser 활용
-- `pattern-inside`, metavariable 같은 고급 규칙 지원
-- false positive를 줄이기 쉬움
+### Security Engine
 
-단점:
+- Semgrep CLI + 내부 휴리스틱 하이브리드 L1
+- L2 reasoning provider 구조
+- SBOM / Syft 연동
+- SonarQube 기반 L3 확장
+- Windows Docker wrapper 경로 지원
 
-- 외부 바이너리 의존성
-- 실행 환경 변수 증가
-- 프로젝트 내부 커스텀 파이프라인과 완전히 맞추려면 추가 통합 필요
+---
 
-### 현재 VSH L1
-
-장점:
-
-- 실제 Semgrep CLI를 붙일 수 있음
-- 가볍고 빠름
-- 레포 내부 제어가 쉬움
-- L2/L3 공통 스키마와 연결하기 쉬움
-- 데모와 반복 시연에 적합
-- 규칙 추가 및 실험 비용이 낮음
-
-단점:
-
-- Semgrep 미설치 환경에서는 여전히 휴리스틱/정규식 비중이 큼
-- 직접구현 계층은 정규식 중심이라 오탐/누락 가능성 존재
-- 복잡한 다중 줄/다중 함수 흐름에 약함
-- 현재 reachability는 정밀 taint analysis가 아니라 휴리스틱 기반 추정임
-
-한 줄로 요약하면:
-
-> 현재 VSH L1은 실제 Semgrep CLI와 직접 구현한 휴리스틱 탐지 계층을 함께 쓰는 하이브리드 L1이며, Semgrep의 핵심 아이디어를 팀이 이해하고 파이프라인에 흡수하기 위해 만든 직접구현 엔진도 계속 유지합니다.
-
-## 직접구현 휴리스틱이 무엇을 보충하는가
-
-지금 L1에서 `Semgrep`을 붙였다고 해서 직접구현 계층이 의미를 잃은 것은 아닙니다. 현재 직접구현 휴리스틱은 아래 역할을 보충합니다.
-
-### 1. reachability annotation
-
-[`VSH_Project_MVP/layer1/common/reachability.py`](VSH_Project_MVP/layer1/common/reachability.py) 는 source/sink 패턴과 간단한 함수 호출 그래프를 이용해 다음 상태를 붙입니다.
-
-- `reachable`
-- `conditionally_reachable`
-- `unknown`
-- `unreachable`
-
-즉 `Semgrep`이 “패턴이 존재한다”를 잘 잡는다면, VSH 휴리스틱은 “사용자 입력이 실제 sink까지 닿는 코드 구조로 보이느냐”를 추가로 표현합니다.
-
-### 2. knowledge 기반 custom rule 보조
-
-[`VSH_Project_MVP/layer1/scanner/mock_semgrep_scanner.py`](VSH_Project_MVP/layer1/scanner/mock_semgrep_scanner.py) 는 `knowledge.json`의 rule을 line-by-line으로 순회합니다.
-
-이 계층은:
-
-- 내부 지식 저장소 기반 룰 실험
-- Semgrep 설치 여부와 무관한 최소 탐지선 확보
-- 레포 내부에서 수정 비용이 낮은 custom rule 유지
-
-에 유리합니다.
-
-### 3. hard-coded pattern rule 보강
-
-[`VSH_Project_MVP/layer1/common/pattern_scan.py`](VSH_Project_MVP/layer1/common/pattern_scan.py) 는 Python/JS/TS에 대해 VSH 내부 룰셋을 돌립니다.
-
-예:
-
-- `eval()`
-- `os.system()`
-- `subprocess(..., shell=True)`
-- `document.write()`
-- `innerHTML`
-
-이 계층은 빠르고 설명 가능성이 높아서, 데모와 반복 시연에 여전히 강합니다.
-
-### 4. Tree-sitter 구조 보조
-
-`TreeSitterScanner`는 현재 주력 엔진은 아니지만, 문자열 정규식보다 구조적인 힌트를 일부 보강합니다.
-
-### 5. typosquatting / 공급망 보조 신호
-
-[`VSH_Project_MVP/layer1/common/import_risk.py`](VSH_Project_MVP/layer1/common/import_risk.py) 기반으로 import 이름 유사도와 알려진 패키지 이름을 비교해 typosquatting 가능성을 탐지합니다. 이건 일반적인 코드 패턴 취약점과는 다른 축의 신호입니다.
-
-### 6. SBOM / 패키지 보강
-
-`SBOMScanner`와 `Syft` 연계를 통해 코드 취약점 외에도:
-
-- 취약 버전 패키지
-- dependency 관점 리스크
-- package record
-
-를 별도 축으로 수집합니다.
-
-정리하면 현재 L1은:
-
-- `Semgrep CLI`가 syntax-aware rule matching을 담당하고
-- VSH 휴리스틱이 reachability, custom rule, typosquatting, SBOM, 후단 스키마 정규화를 보강하는 구조입니다.
-
-## 지금까지 실제로 반영된 작업
-
-최근까지 이 레포에 실제 반영된 큰 작업은 아래와 같습니다.
-
-### L1 / Semgrep
-
-- 실제 `Semgrep CLI` 호출 추가
-- `Semgrep` 미설치 시 내부 휴리스틱으로 폴백
-- `Semgrep`, `pattern_scan`, `MockSemgrep`, `Tree-sitter`, `reachability`를 합치는 하이브리드 L1 구성
-- Windows에서 직접 설치형 `semgrep.exe`가 불안정할 때를 대비해 Docker wrapper 추가
-
-관련 파일:
-
-- [`VSH_Project_MVP/layer1/scanner/semgrep_cli_scanner.py`](VSH_Project_MVP/layer1/scanner/semgrep_cli_scanner.py)
-- [`VSH_Project_MVP/tools/semgrep-docker.cmd`](VSH_Project_MVP/tools/semgrep-docker.cmd)
-
-### Syft / SBOM
-
-- `Syft`를 Python 라이브러리가 아니라 로컬 CLI로 취급하도록 정리
-- 경로 자동 감지와 수동 override 추가
-- Docker wrapper 추가
-
-관련 파일:
-
-- [`VSH_Project_MVP/tools/syft-docker.cmd`](VSH_Project_MVP/tools/syft-docker.cmd)
-- [`VSH_Project_MVP/l3/providers/sbom/real.py`](VSH_Project_MVP/l3/providers/sbom/real.py)
-
-### 설정 / 상태 노출
-
-- `Semgrep`, `Syft`, `Docker`, `Sonar`, `L3 readiness` 상태를 `/system/status`로 노출
-- Settings 화면에서 `Check Semgrep`, `Check Syft`, Sonar URL/Token/Project Key 설정 가능
-- 저장 후 L3 상태 즉시 재평가
-- L2 상세 패널이 backend reasoning 값을 그대로 표시하도록 API 응답 매핑 보정
-- Dashboard severity 카드가 risk priority가 아니라 실제 `CRITICAL/HIGH/MEDIUM/LOW` 개수를 표시하도록 수정
-
-관련 파일:
-
-- [`VSH_Project_MVP/shared/runtime_settings.py`](VSH_Project_MVP/shared/runtime_settings.py)
-- [`VSH_Project_MVP/vsh_api/main.py`](VSH_Project_MVP/vsh_api/main.py)
-- [`VSH_Project_MVP/vsh_desktop/src/components/SettingsPage.tsx`](VSH_Project_MVP/vsh_desktop/src/components/SettingsPage.tsx)
-
-### 데스크톱 시연 UX
-
-- `Annotate File`, `Annotate Project` 버튼 추가
-- annotated 결과를 `.vsh/annotated/`에 저장하고 앱 안에서 preview 확인 가능
-- 파일 선택기에서 Python 전용 필터 대신 `All Files`와 `Security Source Files` 그룹을 제공해 다언어 파일 선택 가능
-- 프로젝트 annotate 시 `.vsh` 산출물을 다시 입력으로 스캔하지 않도록 제외 처리
-
-관련 파일:
-
-- [`VSH_Project_MVP/vsh_desktop/src/App.tsx`](VSH_Project_MVP/vsh_desktop/src/App.tsx)
-- [`VSH_Project_MVP/vsh_desktop/main.js`](VSH_Project_MVP/vsh_desktop/main.js)
-- [`VSH_Project_MVP/vsh_desktop/main.ts`](VSH_Project_MVP/vsh_desktop/main.ts)
-- [`VSH_Project_MVP/vsh_runtime/engine.py`](VSH_Project_MVP/vsh_runtime/engine.py)
-- [`VSH_Project_MVP/layer1/scanner/vsh_l1_scanner.py`](VSH_Project_MVP/layer1/scanner/vsh_l1_scanner.py)
-
-### L3 / Sonar
-
-- SonarCloud token 기반 L3 연결 정리
-- GitHub import 없이도 로컬 폴더를 Sonar 대상으로 돌릴 수 있는 방향으로 정리
-- 로컬 `SonarQube` Docker 서버 자동 부트스트랩 스크립트 추가
-- 로컬 SonarQube에서는 `organization` 없이도 프로젝트 생성/조회 가능하도록 provider 수정
-- Docker scanner 컨테이너에서 `127.0.0.1` 대신 `host.docker.internal`을 쓰도록 보강
-
-관련 파일:
-
-- [`VSH_Project_MVP/scripts/setup_local_sonarqube.py`](VSH_Project_MVP/scripts/setup_local_sonarqube.py)
-- [`VSH_Project_MVP/l3/providers/sonarqube/real.py`](VSH_Project_MVP/l3/providers/sonarqube/real.py)
-
-검증 결과:
-
-- 로컬 SonarQube 서버 `http://127.0.0.1:9000` 구동 확인
-- `vsh-local` 프로젝트 생성 확인
-- 샘플 프로젝트에 대해 실제 로컬 SonarQube 스캔 수행
-- 이슈 `8`건 수집 확인
-
-## 주요 기능
-
-### 데스크톱 중심 분석 흐름
-
-- Electron 앱에서 파일/프로젝트 선택
-- 파일 선택기에서 `All Files`, `Security Source Files`, `Python Files`, `JavaScript / TypeScript` 필터 지원
-- `Scan File`, `Scan Project` 실행
-- Dashboard, Findings Table, Detail Panel, Code Preview 제공
-- `Annotate File`, `Annotate Project`로 주석이 삽입된 preview 생성
-- L2 reasoning / confidence / attack scenario가 상세 패널에 실제 값으로 표시
-- JSON 리포트 Export 지원
-
-### FastAPI 백엔드
-
-주요 API:
-
-- `GET /health`
-- `GET /system/status`
-- `POST /scan/file`
-- `POST /scan/project`
-- `POST /annotate/file`
-- `POST /annotate/project`
-- `POST /watch/start`
-- `POST /watch/stop`
-- `GET /watch/status`
-- `GET /settings`
-- `POST /settings`
-- `POST /settings/test-llm`
-- `POST /settings/check-semgrep`
-- `POST /settings/check-syft`
-
-### 실제 런타임 DB 사용
-
-현재 앱 실행 경로는 repo 내부 mock 저장소를 직접 쓰지 않고, 사용자 런타임 경로의 실제 DB를 사용합니다.
-
-- SQLite: 구조화 취약점/지식 데이터 저장
-- Chroma: RAG 검색용 벡터 저장소
-- JSON seed: knowledge/fix 데이터 초기 복사본
-
-## 저장소 구조
+## 6. Repository Structure
 
 ```text
 VSH/
 ├─ README.md
 ├─ QUICKSTART.md
 ├─ TROUBLESHOOTING.md
-├─ run_vsh.ps1
 ├─ run_vsh.bat
+├─ run_vsh.ps1
 ├─ setup_and_run.ps1
 ├─ .env.example
 └─ VSH_Project_MVP/
    ├─ requirements.txt
    ├─ config.py
-   ├─ vsh_api/
-   ├─ vsh_desktop/
-   ├─ vsh_runtime/
-   ├─ layer1/
-   ├─ layer2/
-   ├─ l3/
-   ├─ repository/
-   ├─ shared/
-   ├─ scripts/
+   ├─ vsh_api/              # FastAPI entrypoint and routes
+   ├─ vsh_desktop/          # Electron + React desktop UI
+   ├─ vsh_runtime/          # Analysis orchestration engine
+   ├─ layer1/               # Static analysis scanners
+   ├─ layer2/               # Reasoning, RAG, provider layer
+   ├─ l3/                   # Sonar, SBOM, PoC providers
+   ├─ repository/           # SQLite / Chroma adapters
+   ├─ shared/               # Runtime settings and common utilities
+   ├─ scripts/              # Local SonarQube and setup helpers
    └─ tests/
+      └─ fixtures/
+         └─ vuln_project/   # Demo vulnerable project
 ```
 
-디렉터리 역할 요약:
+---
 
-- `vsh_api/`: FastAPI 엔트리와 HTTP 라우트
-- `vsh_desktop/`: Electron + React UI
-- `layer1/`: L1 스캐너와 정규화 로직
-- `layer2/`: reasoning, retriever, analyzer
-- `l3/`: Sonar, SBOM, PoC 검증 자산
-- `vsh_runtime/`: 실제 분석 오케스트레이션
-- `shared/`: 공용 유틸, 계약, 런타임 설정
-- `tests/`: 취약 샘플과 단위 테스트
+## 7. Quick Start
 
-## 빠른 실행
-
-시연용 기준 가장 간단한 실행 방법:
+> Windows 시연 기준으로는 OneDrive 경로보다 `C:\VSH` 같은 짧은 로컬 경로를 권장합니다.
 
 ```powershell
+cd C:\VSH
 .\run_vsh.bat
 ```
 
-현재 `run_vsh.bat` / `run_vsh.ps1`는 다음을 자동으로 처리합니다.
+`run_vsh.bat` / `run_vsh.ps1`는 다음 작업을 목표로 합니다.
 
-1. Python 실행 가능 여부 확인
-2. 필요한 경우 Python requirements 설치
-3. Electron 의존성 확인
-4. 런타임 DB 존재 여부 확인
-5. 백엔드 실행 확인
-6. Electron 앱 실행
+```mermaid
+flowchart TD
+    A[run_vsh.bat] --> B[Check Python]
+    B --> C[Install Python requirements]
+    C --> D[Check Node / npm]
+    D --> E[Install Desktop dependencies]
+    E --> F[Prepare runtime DB]
+    F --> G[Start FastAPI backend]
+    G --> H[Start Electron Desktop]
+```
 
-중요:
+첫 실행은 의존성 설치 때문에 시간이 걸릴 수 있습니다. 발표나 시연 전에는 반드시 한 번 미리 실행해 두는 것을 권장합니다.
 
-- 현재는 `vuln_project` 자동 선택/자동 스캔을 제거해 두었습니다.
-- 앱은 빈 상태로 열리고, 사용자가 직접 프로젝트를 선택하는 시연 흐름입니다.
+---
 
-## 수동 실행
+## 8. Manual Run
 
-### 1. 백엔드 실행
+자동 실행이 실패하거나 디버깅이 필요한 경우 아래 방식으로 실행합니다.
+
+### 8.1 Backend
 
 ```powershell
-cd VSH_Project_MVP
+cd C:\VSH\VSH_Project_MVP
+python -m pip install -r requirements.txt
 python -m uvicorn vsh_api.main:app --host 127.0.0.1 --port 3000
 ```
 
-### 2. 프런트 빌드
+정상 로그:
 
-```powershell
-cd VSH_Project_MVP\vsh_desktop
-npm run build
+```text
+Uvicorn running on http://127.0.0.1:3000
 ```
 
-### 3. Electron 실행
+Health check:
 
-```powershell
-$env:VSH_USE_DIST='true'
-$env:VSH_AUTO_START_API='false'
-Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
-.\node_modules\electron\dist\electron.exe .
+```text
+http://127.0.0.1:3000/health
 ```
 
-## 완전 로컬 L3
+### 8.2 Desktop
 
-기본 VSH 스캔은 원래부터 GitHub 레포 연결 없이 로컬 파일/폴더를 바로 분석합니다. 여기에 `L3`까지 완전히 로컬로 붙이고 싶다면 로컬 `SonarQube`를 Docker로 띄우면 됩니다.
-
-이미 자동 부트스트랩 스크립트가 포함되어 있습니다.
+새 PowerShell 창에서 실행합니다.
 
 ```powershell
-cd VSH_Project_MVP
-python -m scripts.setup_local_sonarqube
+cd C:\VSH\VSH_Project_MVP\vsh_desktop
+npm install
+npm run electron-dev
 ```
 
-이 스크립트는:
+Vite dev server 확인:
 
-1. `sonarqube:community` Docker 이미지를 pull
-2. `vsh-sonarqube` 컨테이너 실행
-3. `http://127.0.0.1:9000` 준비될 때까지 대기
-4. 로컬 Sonar 토큰 생성
-5. `vsh-local` 프로젝트 생성
-6. VSH 설정 파일에 URL / token / project key 저장
+```text
+http://localhost:5173
+```
 
-즉 SonarCloud 계정 없이도 로컬 SonarQube만으로 L3를 붙일 수 있습니다.
+---
 
-## 데스크톱 사용 흐름
+## 9. Desktop Demo Flow
+
+```mermaid
+flowchart LR
+    A[Open VSH Desktop] --> B[Select Project]
+    B --> C[Choose tests/fixtures/vuln_project]
+    C --> D[Scan Project]
+    D --> E[Dashboard]
+    E --> F[Click Finding]
+    F --> G[Reasoning / Scenario / Fix]
+    G --> H[Code Preview]
+    H --> I[Annotate Project]
+```
 
 권장 시연 순서:
 
@@ -466,59 +373,135 @@ python -m scripts.setup_local_sonarqube
 3. `Select Project` 클릭
 4. `VSH_Project_MVP\tests\fixtures\vuln_project` 선택
 5. `Scan Project` 클릭
-6. Dashboard 확인
-7. Findings 항목 클릭 후 Detail / Code Preview 확인
-8. `Annotate Project` 클릭
-9. 보라색 annotation preview 영역과 `.vsh/annotated/` 산출물 확인
+6. Dashboard severity card 확인
+7. Findings 항목 클릭
+8. Detail Panel에서 reasoning / attack scenario / fix suggestion 확인
+9. Code Preview 확인
+10. `Annotate Project`로 annotation preview 확인
 
-현재 구현 기준 동작 차이:
+---
 
-- `Scan File`: 단일 파일 결과를 같은 Dashboard/Findings 영역에 표시
-- `Scan Project`: 프로젝트 전체 결과를 같은 Dashboard/Findings 영역에 표시
-- `Annotate File`: 단일 파일에 대한 주석형 preview를 생성
-- `Annotate Project`: 프로젝트 내 탐지 파일들을 `.vsh/annotated/`에 저장하고 preview를 보여줌
-- `Watch`: 백엔드 감시는 시작하지만 프런트 대시보드는 자동 갱신되지 않음
+## 10. API Reference
 
-## 런타임 DB 구조
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/health` | Backend health check |
+| GET | `/system/status` | Semgrep, Syft, Docker, L3 readiness |
+| POST | `/scan/file` | Scan one file |
+| POST | `/scan/project` | Scan project folder |
+| POST | `/annotate/file` | Generate annotated preview for one file |
+| POST | `/annotate/project` | Generate annotated preview for project |
+| POST | `/watch/start` | Start backend watch |
+| POST | `/watch/stop` | Stop backend watch |
+| GET | `/watch/status` | Get watch status |
+| GET | `/settings` | Read settings |
+| POST | `/settings` | Save settings |
+| POST | `/settings/test-llm` | Test LLM provider |
+| POST | `/settings/check-semgrep` | Check Semgrep CLI |
+| POST | `/settings/check-syft` | Check Syft CLI |
 
-활성 런타임 경로:
+---
+
+## 11. Configuration
+
+`.env.example`를 복사해서 `.env`를 만들 수 있습니다.
+
+```powershell
+Copy-Item .env.example .env
+```
+
+주요 환경 변수:
+
+| Variable | Description |
+|---|---|
+| `LLM_PROVIDER` | `mock`, `gemini`, `openai` 등 reasoning provider |
+| `GEMINI_API_KEY` | Gemini provider 사용 시 필요 |
+| `OPENAI_API_KEY` | OpenAI provider 사용 시 필요 |
+| `SEMGREP_PATH` | Semgrep CLI 경로 override |
+| `SYFT_PATH` | Syft CLI 경로 override |
+| `SONAR_URL` / `SONARQUBE_URL` | SonarQube server URL |
+| `SONAR_TOKEN` / `SONARQUBE_TOKEN` | Sonar auth token |
+| `SONAR_PROJECT_KEY` | Sonar project key |
+| `VSH_AUTO_START_API` | Desktop에서 API 자동 실행 여부 |
+| `VSH_USE_DIST` | Electron에서 dist build 사용 여부 |
+
+LLM 키가 없어도 기본 분석은 mock reasoning으로 동작합니다.
+
+---
+
+## 12. Semgrep, Syft, SonarQube
+
+### Semgrep
+
+VSH L1은 실제 Semgrep CLI와 내부 휴리스틱을 함께 사용합니다.
+
+```mermaid
+flowchart LR
+    Code[Code] --> A{Semgrep Installed?}
+    A -- Yes --> B[Run Semgrep CLI]
+    A -- No --> C[Use Internal Heuristics]
+    B --> D[Normalize]
+    C --> D
+    D --> E[Reachability / Dedup]
+```
+
+### Syft
+
+Syft는 Python 라이브러리가 아니라 별도 CLI 도구입니다.
+
+VSH는 다음을 지원합니다.
+
+- PATH 자동 감지
+- 수동 경로 override
+- `/settings/check-syft`
+- Docker wrapper 우회 실행
+
+### Local SonarQube
+
+SonarCloud 없이 로컬 SonarQube를 Docker로 띄울 수 있습니다.
+
+```powershell
+cd VSH_Project_MVP
+python -m scripts.setup_local_sonarqube
+```
+
+자동 구성 항목:
+
+1. `sonarqube:community` Docker image pull
+2. `vsh-sonarqube` container 실행
+3. `http://127.0.0.1:9000` 준비 대기
+4. local Sonar token 생성
+5. `vsh-local` project 생성
+6. VSH settings에 URL / token / project key 저장
+
+---
+
+## 13. Runtime Data
+
+VSH는 실행 안정성을 위해 레포 내부가 아닌 사용자 런타임 경로에 DB를 둡니다.
 
 ```text
 C:\Users\<user>\.vsh\runtime_data
 ```
 
-주요 구성:
+```mermaid
+flowchart TB
+    Runtime[C:\Users\user\.vsh\runtime_data] --> DB[vsh.db]
+    Runtime --> Chroma[chroma/]
+    Runtime --> Knowledge[knowledge.json]
+    Runtime --> Fix[kisa_fix.json]
+    Runtime --> Log[log.json]
+```
 
-- `vsh.db`: SQLite 런타임 DB
-- `chroma/`: Chroma persistent storage
-- `knowledge.json`: 시드 지식 데이터 복사본
-- `kisa_fix.json`: 수정 가이드 시드 복사본
-- `log.json`: 런타임 로그
+이 구조를 선택한 이유:
 
-왜 repo 밖으로 이동했는가:
+- Windows workspace / drive 조합에서 SQLite `disk I/O error` 방지
+- Chroma persistent storage 안정화
+- 레포 삭제/이동과 사용자 런타임 데이터 분리
 
-- 특정 Windows 드라이브/워크스페이스 조합에서 SQLite `disk I/O error` 발생
-- Chroma도 repo 내부 경로에서 불안정하게 동작
-- 사용자 프로필 경로로 이동한 뒤 안정화
+---
 
-## L1 상세 문서
-
-팀원 설명용 별도 문서:
-
-- [`VSH_Project_MVP/docs/L1_SEMGREP_ALGORITHM_KR.md`](VSH_Project_MVP/docs/L1_SEMGREP_ALGORITHM_KR.md)
-
-이 문서에는 아래가 포함됩니다.
-
-- 현재 L1의 실제 구현 구조
-- `MockSemgrepScanner`와 `pattern_scan`의 차이
-- 규칙 매칭 원리
-- reachability call graph 추정 방식
-- dedup / normalize 흐름
-- 실제 Semgrep과 현재 구현의 차이점
-- 왜 이 구조를 선택했는지에 대한 배경
-- 장점 / 한계 / 개선 방향
-
-## 데모 대상
+## 14. Demo Target
 
 기본 시연용 취약 프로젝트:
 
@@ -528,160 +511,140 @@ VSH_Project_MVP\tests\fixtures\vuln_project
 
 포함 취약 패턴 예시:
 
-- command injection
-- eval / code execution
-- DOM-based XSS
+| File / Pattern | Risk |
+|---|---|
+| `cmd_injection.py` | Command Injection |
+| `rce.py` | Eval / Code Execution |
+| `sqli.py` | SQL Injection |
+| `secret.py` | Hardcoded Secret |
+| `path.py` | Path Traversal |
 
-## 환경 변수
+---
 
-`.env.example` 기준 주요 값:
+## 15. Troubleshooting
 
-- `LLM_PROVIDER`
-- `GEMINI_API_KEY`
-- `OPENAI_API_KEY`
-- `SONAR_TOKEN`
-- `SONARQUBE_TOKEN`
-- `SONAR_URL`
-- `SONARQUBE_URL`
-- `SONAR_ORG`
-- `SONAR_PROJECT_KEY`
-- `SEMGREP_PATH`
-- `SONARQUBE_PROJECT_KEY`
-- `SYFT_PATH`
-- `VSH_AUTO_START_API`
-- `VSH_USE_DIST`
+### 15.1 Electron 화면이 흰색으로만 보임
 
-복사 예시:
+브라우저 DevTools Console을 확인합니다.
 
-```powershell
-Copy-Item .env.example .env
+대표 원인:
+
+```text
+ReferenceError: process is not defined
 ```
 
-## 트러블슈팅
+해결 방향:
 
-### 1. Electron이 Node 모드로 뜸
+- React renderer에서 `process.env` 직접 참조 금지
+- Vite 환경 변수는 `import.meta.env.VITE_*` 사용
+- Electron 전용 API는 `window.electronAPI` 존재 여부 확인 후 호출
 
-원인:
+### 15.2 Uvicorn import 에러
 
-- `ELECTRON_RUN_AS_NODE=1`
-
-해결:
+잘못된 실행:
 
 ```powershell
-Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+cd VSH_Project_MVP\vsh_api
+python -m uvicorn main:app
 ```
 
-### 2. SQLite / Chroma가 repo 내부에서 불안정함
+권장 실행:
+
+```powershell
+cd VSH_Project_MVP
+python -m uvicorn vsh_api.main:app --host 127.0.0.1 --port 3000
+```
+
+### 15.3 OneDrive 경로에서 Electron 설치 실패
 
 증상:
 
-- `sqlite3.OperationalError: disk I/O error`
-- Chroma 초기화 실패
+```text
+EBUSY
+EPERM
+electron install.js failed
+```
 
-해결:
+권장 경로:
 
-- 런타임 DB를 `C:\Users\<user>\.vsh\runtime_data`로 이동
+```text
+C:\VSH
+```
 
-### 3. L3가 비활성으로 보임
+### 15.4 L3가 비활성으로 보임
 
-원인:
+기본 스캔에는 영향이 없습니다. 심화 검증만 비활성화됩니다.
 
-- Sonar 토큰 미설정
-- Docker 미설치
-- Sonar project key 미설정
+확인 항목:
 
-현재는 `/system/status`에서 아래를 함께 확인할 수 있습니다.
+- Docker 설치 여부
+- Sonar token 설정 여부
+- Sonar project key 설정 여부
+- `/system/status` 응답
 
-- `semgrep` 설치 여부
-- `syft` 설치 여부
-- `docker` 설치 여부
-- `l3.sonar.has_token`
-- `l3.sonar.project_key`
-
-이 경우 기본 동작에는 영향 없고, 심화 검증만 꺼집니다.
-
-### 4. Syft는 pip 패키지인가
-
-아닙니다. 현재 VSH에서 취급하는 `Syft`는 Python 라이브러리가 아니라 **별도 로컬 CLI 도구**입니다.
-
-즉:
-
-- `pip install`만으로 VSH가 기대하는 `syft` 바이너리가 준비된다고 가정하면 안 되고
-- 일반적으로는 공식 배포 바이너리나 OS 패키지 매니저 경로에 설치된 `syft` CLI가 필요합니다.
-
-VSH는 이 전제를 기준으로:
-
-- PATH 자동 감지
-- 수동 경로 override
-- `/settings/check-syft`
-
-흐름을 제공합니다.
-
-### 4. Watch를 켰는데 대시보드가 자동 갱신되지 않음
+### 15.5 Watch를 켰는데 UI가 자동 갱신되지 않음
 
 현재 구현 한계입니다.
 
-- 백엔드 감시는 시작됨
-- `.vsh/report.json`, `.vsh/diagnostics.json`은 저장됨
-- 그러나 프런트가 watch 결과를 다시 polling 하지는 않음
+- 백엔드 watch는 시작됨
+- `.vsh/report.json`, `.vsh/diagnostics.json` 저장 가능
+- 프런트 대시보드는 아직 자동 polling하지 않음
 
-## 향후 개발
+---
+
+## 16. Current Limitations
+
+| Area | Limitation |
+|---|---|
+| L1 | Semgrep 미설치 환경에서는 휴리스틱 / 정규식 비중이 큼 |
+| Reachability | 완전한 taint analysis가 아니라 경량 추정 기반 |
+| L2 | confidence는 LLM 고유 확률이 아니라 evidence / verification 신호 기반 heuristic |
+| RAG | 한국어 보안 문서 검색 품질은 향후 hybrid retrieval로 개선 필요 |
+| L3 | PoC template coverage가 아직 제한적 |
+| Watch | backend watch 결과가 UI에 실시간 자동 반영되지는 않음 |
+| Packaging | Windows / Electron 배포 패키징 안정화가 추가로 필요 |
+
+---
+
+## 17. Roadmap
+
+```mermaid
+gantt
+    title VSH Roadmap
+    dateFormat  YYYY-MM-DD
+    section Detection
+    Semgrep rule parity        :active, 2026-03-01, 60d
+    Tree-sitter expansion      :2026-04-01, 60d
+    section Reasoning
+    L2 prompt tuning           :active, 2026-03-15, 45d
+    Hybrid RAG retrieval       :2026-04-15, 60d
+    section Verification
+    Sonar L3 hardening         :active, 2026-03-20, 45d
+    PoC template registry      :2026-04-20, 70d
+    section Product
+    Watch UI live refresh      :2026-04-01, 45d
+    Windows packaging          :2026-04-10, 60d
+```
 
 우선순위 높은 다음 단계:
 
-- 실제 Semgrep CLI와 내부 휴리스틱 엔진 간 rule parity 확장
+- Watch 결과의 실시간 UI 반영
+- Semgrep CLI와 내부 휴리스틱 rule parity 확장
 - Tree-sitter 기반 구조 탐지 범위 확장
-- watch 결과의 실시간 UI 반영
 - L3 Sonar / PoC 실운영 연동 고도화
-- Windows/Electron 권한 문제를 피하는 배포 패키징 정리
-- L1/L2/L3 상태를 UI 카드에서 더 명확히 표시
-- 리포트 이력과 재실행 이력 관리 기능 추가
+- Windows / Electron 배포 패키징 안정화
+- 분석 이력 및 리포트 히스토리 관리
+- VS Code extension diagnostics / quick fix 고도화
 
-## 자체 평가 및 보완
+---
 
-### L1
+<div align="center">
 
-L1은 이번 단계에서 실제 `Semgrep CLI`를 연결하고, 기존 직접구현 휴리스틱 엔진과 결합하여 하이브리드 정적 분석 계층으로 고도화되었습니다. 특히 `pattern_scan`, `MockSemgrepScanner`, `reachability`, `import_risk`, `SBOM` 보조 경로를 통해 단순 코드 패턴뿐 아니라 공급망 위험과 프로젝트 맞춤형 보안 신호까지 함께 수집할 수 있게 된 점은 분명한 성과입니다. 또한 이 결과를 공통 스키마로 정규화하여 L2/L3 및 프런트 UI와 자연스럽게 연결한 것도 실제 제품 관점에서 의미가 있었습니다.
+### VSH
 
-다만 현재 L1은 완전한 `Semgrep-only` 엔진이 아니라 실제 Semgrep 결과와 내부 휴리스틱 결과를 합치는 구조이므로, 중복 결과 병합과 신뢰도 우선순위 정리가 앞으로 더 정교해질 필요가 있습니다. 현재도 dedup 단계가 존재하지만, 향후에는 같은 위치를 여러 엔진이 잡았을 때 어떤 엔진을 더 신뢰할지, 어떤 메타데이터를 유지할지를 rule-level로 세밀하게 다듬어야 합니다.
+<b>From fast detection to explainable verification.</b>
 
-또한 직접구현 휴리스틱의 상당 부분은 line-by-line 정규식 기반 탐지이기 때문에, 빠르고 설명 가능하다는 장점이 있는 반면 복잡한 다중 줄 문맥, 간접 호출, 프레임워크별 흐름, interprocedural data flow에는 한계가 있습니다. `reachability` 역시 완전한 taint analysis가 아니라 source/sink와 호출 그래프 기반의 경량 추정이므로, 실제 실행 흐름을 완전히 보장하지는 못합니다. 따라서 향후에는 Tree-sitter나 구조 기반 분석 비중을 높이고, Semgrep과 내부 룰 간 parity를 강화하며, false positive를 줄이기 위한 context filter를 추가하는 방향으로 보완할 예정입니다.
+빠른 정적 탐지, AI 기반 설명, SBOM/Sonar 심화 검증을 데스크톱 UX로 묶어  
+개발자가 로컬에서 바로 실행하고 이해할 수 있는 보안 분석 플랫폼을 지향합니다.
 
-마지막으로 L1과 연결된 사용자 경험 측면에서는 `Semgrep`/`Syft` 실행 경로 감지, 상태 표시, 설정 저장 후 즉시 재평가, 인라인 경고 소비를 위한 메타데이터 정리까지 진행하였지만, 아직 watch 기반 실시간 UI 재반영과 IDE별 피드백 표준화는 추가 작업이 필요합니다. 즉 현재 L1은 탐지 엔진으로서뿐 아니라 프런트/IDE와 연결되는 제품형 보안 레이어로 발전하고 있으나, 탐지 정밀도와 사용자 피드백 루프는 계속 고도화해야 합니다.
-
-### L2
-
-- **Confidence**: LLM 자체의 “불확실성”을 직접 측정한다기보다, evidence 양과 verification 상태, retrieval hit 수 같은 파이프라인 신호를 heuristic으로 점수화한 구조에 가깝습니다.
-- **Patch preview**: 실제 프로젝트 전체 문맥을 반영한 안전한 패치 생성이라기보다, 취약 코드 스니펫과 제안 코드를 비교한 preview 중심이라 실서비스 자동 패치로 쓰기에는 한계가 있습니다.
-- **Retrieval 품질 루프**: RAG는 동작하지만, 검색 정확도 측정, hit-rate 평가, 프롬프트 튜닝 같은 반복 최적화 체계는 아직 충분히 갖춰지지 않았습니다.
-- **Provider 운영**: 멀티 provider 지원은 강점이지만, 품질·비용·속도·안정성을 기준으로 어떤 provider를 어떤 상황에 쓸지에 대한 운영 정책은 더 정교해질 필요가 있습니다.
-
-### RAG
-
-**1. KISA 데이터 구조화 미흡**
-
-- PDF 기반 원문을 페이지 단위 텍스트 덩어리로 저장한 비중이 있어, 취약 코드 예시, 안전 코드 예시, 조치 방법이 별도 필드로 충분히 구조화되지 않았습니다.
-- 그 결과 실제 LLM에는 필요 이상의 원문이 함께 들어가 컨텍스트 낭비가 생길 수 있습니다.
-
-**2. 한국어 임베딩 정확도**
-
-- 현재 사용 중인 `all-MiniLM-L6-v2`는 범용 다국어 모델이지만, KISA/FSI 같은 한국어 보안 문서 검색에 특화된 임베딩은 아닙니다.
-- 따라서 한국어 질의나 국내 보안 문서 맥락에서는 의미 유사도 품질이 기대보다 낮을 수 있습니다.
-
-**3. 벡터 검색 중심 구조**
-
-- 현재는 벡터 유사도 검색 비중이 크며, `"CWE-89"`, `"PreparedStatement"` 같은 정확한 키워드 매칭이 중요한 보안 질의에는 한계가 있습니다.
-- 향후에는 BM25 같은 키워드 검색과 벡터 검색을 섞는 하이브리드 retrieval이 필요합니다.
-
-**4. 정적 데이터베이스 성격**
-
-- NVD CVE는 계속 업데이트되지만, 현재 파이프라인은 데이터 재수집과 재색인이 자동화되어 있지 않아 최신 취약점 반영이 지연될 수 있습니다.
-- 따라서 운영 단계에서는 주기적 동기화 잡이나 incremental update 체계가 필요합니다.
-
-### L3
-
-L3는 이번 단계에서 로컬 `SonarQube`와 Docker 기반 PoC, `Syft` 기반 SBOM 경로까지 실제로 연동되면서 “심화 검증 레이어”로서의 형태를 갖추게 되었습니다. 특히 SonarCloud에 의존하지 않고 Docker로 띄운 로컬 SonarQube를 지원하게 되면서, 레포 업로드 없이도 로컬 프로젝트를 대상으로 L3를 구성할 수 있게 된 점은 실제 활용성과 시연 안정성 모두에 의미가 있었습니다.
-
-다만 PoC 템플릿과 Docker 검증 환경은 아직 시연 친화적인 특정 시나리오 중심으로 구성되어 있어, 다양한 CWE를 일반화해 다루는 수준까지는 가지 못했습니다. 현재 구조는 Dispatcher와 템플릿 레지스트리 덕분에 확장 가능성은 확보했지만, 실제 운영 수준으로 가려면 CWE별 템플릿 수, 입력 다양성, 성공/실패 판정 기준을 더 풍부하게 만들어야 합니다.
-
-또한 Sonar 계층은 예전 SonarCloud free tier 한계를 의식해 설계된 부분이 있었고, 현재는 로컬 SonarQube 지원으로 이를 일부 보완했지만, 여전히 룰셋 커버리지와 취약점 정탐률은 지속적으로 개선해야 합니다. 장기적으로는 Semgrep, Sonar, 자체 규칙 엔진, 공급망 분석 결과를 더 정교하게 결합하여 L3에서도 보다 높은 정탐률과 설명 가능성을 확보하는 방향으로 발전시킬 계획입니다.
+</div>
