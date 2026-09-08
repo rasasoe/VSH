@@ -76,6 +76,26 @@ Select Project
 | Demo Friendly | Windows 로컬 환경에서 샘플 취약 프로젝트를 바로 스캔 가능 |
 | Offline-friendly Baseline | API 키 없이도 mock reasoning으로 기본 시연 가능 |
 
+### Security Portfolio Workflow
+
+보안 저장소는 하나로 억지로 합치지 않고 각자의 분석 책임을 유지합니다. 대신 세 프로젝트가 `schema_version: "1.0"` 공통 Finding 계약을 출력하므로, 향후 하나의 대시보드나 리포트 수집기가 같은 방식으로 소비할 수 있습니다.
+
+```mermaid
+flowchart TD
+    CTI["DotasPlus — Threat Intelligence"] --> Contract["Finding Contract v1.0"]
+    ASM["Python ASM Framework — Attack Surface"] --> Contract
+    AppSec["VSH — Application Security"] --> Contract
+    Contract --> View["Future Unified Security View"]
+```
+
+| Repository | 뚜렷한 역할 | 공통 출력 |
+|---|---|---|
+| `DotasPlus` | 외부 문서의 IOC를 자산과 연결하는 위협 인텔리전스 | `threat_intelligence.asset_indicator_match` |
+| `python-asm-framework` | 승인된 범위의 자산·서비스·노출면 점검 | Attack Surface Finding |
+| `VSH` | 소스코드와 의존성의 취약점 분석·설명·검증 | `application_security.code_finding`, `application_security.package_risk` |
+
+VSH는 코드 취약점과 패키지 위험을 기존 상세 결과에 보존하면서, `findings.json`으로 공통 계약도 함께 내보냅니다. 이 연결은 저장소 간 직접 실행 의존성이 아니라 **결과 데이터의 상호운용성**을 위한 얇은 어댑터입니다.
+
 ---
 
 ## 3. Architecture
@@ -235,7 +255,7 @@ flowchart LR
 - Detail panel
 - Code preview
 - `Annotate File`, `Annotate Project`
-- JSON export
+- 상세 JSON export와 공통 `findings.json` export
 - Settings / system status
 
 ### Backend API
@@ -334,7 +354,24 @@ Health check:
 http://127.0.0.1:3000/health
 ```
 
-### 8.2 Desktop
+### 8.2 CLI Finding Export
+
+`--out-dir`를 지정하면 VSH 상세 결과와 함께 공통 Finding 계약 파일을 생성합니다.
+
+```powershell
+cd C:\VSH\VSH_Project_MVP
+python -m scripts.vsh_cli scan-project tests\fixtures\vuln_project --out-dir exports
+```
+
+```text
+exports/
+├─ result.json
+├─ result.md
+├─ diagnostics.json
+└─ findings.json
+```
+
+### 8.3 Desktop
 
 새 PowerShell 창에서 실행합니다.
 
@@ -498,6 +535,15 @@ flowchart TB
 - Windows workspace / drive 조합에서 SQLite `disk I/O error` 방지
 - Chroma persistent storage 안정화
 - 레포 삭제/이동과 사용자 런타임 데이터 분리
+
+별도로 `VshRuntimeEngine.write_outputs()` 또는 CLI의 `--out-dir`를 사용하면 다음 포트폴리오용 결과 묶음을 생성합니다.
+
+| File | Purpose |
+|---|---|
+| `result.json` | VSH 고유의 전체 분석 결과 |
+| `result.md` | 사람이 읽는 Markdown 리포트 |
+| `diagnostics.json` | 에디터·UI 진단 데이터 |
+| `findings.json` | DotasPlus·ASM과 호환되는 `schema_version: "1.0"` 공통 Finding |
 
 ---
 

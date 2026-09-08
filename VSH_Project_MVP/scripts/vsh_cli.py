@@ -39,11 +39,13 @@ def main() -> None:
     sf = sub.add_parser("scan-file")
     sf.add_argument("file")
     sf.add_argument("--format", choices=["json", "markdown", "summary"], default="summary")
+    sf.add_argument("--out-dir", help="Write result.json, result.md, diagnostics.json, and findings.json")
     sf.add_argument("--wait-l3", action="store_true", help="Wait for L3 completion (default: false)")
 
     sp = sub.add_parser("scan-project")
     sp.add_argument("dir")
     sp.add_argument("--format", choices=["json", "markdown", "summary"], default="summary")
+    sp.add_argument("--out-dir", help="Write result.json, result.md, diagnostics.json, and findings.json")
     sp.add_argument("--wait-l3", action="store_true", help="Wait for L3 completion (default: false)")
 
     dg = sub.add_parser("diagnostics")
@@ -65,6 +67,8 @@ def main() -> None:
     if args.cmd == "scan-file":
         result = engine.analyze_file(args.file)
         _print(result, args.format)
+        if args.out_dir:
+            logger.info("Saved reports: %s", engine.write_outputs(result, args.out_dir))
         
         # ✅ L3 백그라운드 실행
         if l3_enabled:
@@ -83,6 +87,8 @@ def main() -> None:
     elif args.cmd == "scan-project":
         result = engine.analyze_project(args.dir)
         _print(result, args.format)
+        if args.out_dir:
+            logger.info("Saved reports: %s", engine.write_outputs(result, args.out_dir))
         
         # ✅ L3 백그라운드 실행
         if l3_enabled:

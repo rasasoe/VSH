@@ -1,0 +1,27 @@
+name: Runtime tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: VSH_Project_MVP
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: VSH_Project_MVP/requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Test runtime and shared Finding contract
+        run: python -m pytest tests/unit/test_runtime_workflow.py -q
