@@ -11,6 +11,7 @@ from models.vulnerability import Vulnerability
 from reporting.report_engine import ReportEngine
 from shared.runtime_settings import apply_runtime_env, load_config
 from vsh_runtime.diagnostics import build_inline_preview, build_markdown_preview, vuln_to_diagnostic
+from vsh_runtime.findings_export import build_findings_export
 from vsh_runtime.l3_validator import L3Validator
 from vsh_runtime.risk import compute_package_risk, compute_vuln_risk
 from vsh_runtime.sca_usage import build_package_usage_index
@@ -122,10 +123,20 @@ class VshRuntimeEngine:
         json_path = out / "result.json"
         md_path = out / "result.md"
         diag_path = out / "diagnostics.json"
+        findings_path = out / "findings.json"
         json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         self.report.write_markdown(str(md_path), {"summary": {"file_path": "target", "total_vulns": len(payload["vuln_records"]), "total_packages": len(payload["package_records"]), "severity_distribution": {}}, "reachable_issues": payload["vuln_records"]})
         diag_path.write_text(json.dumps(payload["diagnostics"], ensure_ascii=False, indent=2), encoding="utf-8")
-        return {"json": str(json_path), "markdown": str(md_path), "diagnostics": str(diag_path)}
+        findings_path.write_text(
+            json.dumps(build_findings_export(payload), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return {
+            "json": str(json_path),
+            "markdown": str(md_path),
+            "diagnostics": str(diag_path),
+            "findings": str(findings_path),
+        }
     
     def annotate_file(self, file_path: str, in_place: bool = False) -> dict:
         """Analyze a file and generate annotated source code.
