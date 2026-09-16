@@ -12,6 +12,7 @@ from layer2.verifier.registry_verifier import RegistryVerifier
 from models.scan_result import ScanResult
 from models.vulnerability import Vulnerability
 from reporting.report_engine import ReportEngine
+from vsh_runtime.engine import VshRuntimeEngine
 from shared.finding_dedup import deduplicate_findings
 
 
@@ -48,11 +49,12 @@ def test_mixed_language_detection(tmp_path: Path):
     assert langs == {"python", "typescript"}
 
 
-def test_dedup_key_considers_rule_id():
+def test_duplicate_location_retains_both_rule_ids():
     f1 = Vulnerability(file_path="a.py", cwe_id="CWE-78", severity="HIGH", line_number=1, code_snippet="os.system(x)", rule_id="R1")
     f2 = Vulnerability(file_path="a.py", cwe_id="CWE-78", severity="HIGH", line_number=1, code_snippet="os.system(x)", rule_id="R2")
     dedup = deduplicate_findings([f1, f2])
-    assert len(dedup) == 2
+    assert len(dedup) == 1
+    assert set(dedup[0].metadata['merged_rule_ids']) == {'R1', 'R2'}
 
 
 def test_typosquatting_evidence(tmp_path: Path):
@@ -75,27 +77,31 @@ def test_provider_interfaces_smoke():
 def test_e2e_l1_l2_l3_like_flow(tmp_path: Path):
     target = tmp_path / "app.py"
     target.write_text("import reqquests\nuser=input()\nprint(eval(user))\n", encoding="utf-8")
-    result = VSHL1Scanner().scan(str(target))
-    payload = ReportEngine().build_payload(result, l2_enrichment=[{"provider": "mock"}], l3_validation=[{"provider": "cold-path", "status": "queued"}])
-    assert payload["summary"]["total_vulns"] >= 1
-    assert "l2_enrichment" in payload and "l3_validation" in payload
+    payload = VshRuntimeEngine().analyze_file(str(target))
+    assert len(payload['vuln_records']) >= 1
+    assert payload['l2_reasoning_results']
+    assert payload['l3_validation_results'] == []
+    assert all(v['l3_validated'] is None for v in payload['vuln_records'])
 
 
 def test_report_snapshot_like(tmp_path: Path):
     finding = Vulnerability(file_path="a.py", cwe_id="CWE-95", severity="CRITICAL", line_number=1, code_snippet="eval(x)", reachability_status="reachable", metadata={"reachability_confidence":"high"})
     result = normalize_scan_result(ScanResult(file_path="a.py", language="python", findings=[finding]))
     engine = ReportEngine()
-    payload = engine.build_payload(result)
+    payload = {'vuln_records': [v.model_dump() for v in result.vuln_records]}
     out = tmp_path / "summary.md"
     engine.write_markdown(str(out), payload)
     text = out.read_text(encoding="utf-8")
-    assert "Reachable Issues" in text
+    assert "Reachable issues" in text
+    assert 'CWE-95 @ a.py:1' in text
 
 
-def test_windows_safe_repo_patterns_absent():
-    banned = ["command_exec.txt", "rm -rf /", "curl http://malicious"]
-    repo = Path(__file__).resolve().parents[1]
-    files = [p for p in repo.rglob("*") if p.is_file() and p.suffix in {".py", ".md", ".txt", ".json"}]
-    corpus = "\n".join(p.read_text(encoding="utf-8", errors="ignore") for p in files)
-    for token in banned:
-        assert token not in corpus
+def test_static_scan_does_not_execute_or_modify_target(tmp_path):
+    marker = tmp_path / 'executed.txt'
+    source = tmp_path / 'untrusted.py'
+    content = f'from pathlib import Path\nPath({str(marker)!r}).write_text("executed")\nuser=input()\neval(user)\n'
+    source.write_text(content, encoding='utf-8')
+    result = VSHL1Scanner().scan(str(source))
+    assert result.findings
+    assert not marker.exists()
+    assert source.read_text(encoding='utf-8') == content

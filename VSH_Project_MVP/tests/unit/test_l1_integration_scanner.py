@@ -6,7 +6,7 @@ from shared.finding_dedup import deduplicate_findings
 from shared.runtime_settings import detect_semgrep, get_effective_l3_status
 
 
-def test_vsh_l1_scanner_detects_pattern_and_typosquatting(tmp_path):
+def test_vsh_l1_scanner_detects_pattern_and_typosquatting(tmp_path, monkeypatch):
     sample = tmp_path / "sample.py"
     sample.write_text(
         "\n".join(
@@ -22,7 +22,7 @@ def test_vsh_l1_scanner_detects_pattern_and_typosquatting(tmp_path):
 
     try:
         import config
-        config.VULNERABLE_PACKAGES["requests"] = {"vulnerable_below": "2.26.0", "cve": "CVE-9999"}
+        monkeypatch.setitem(config.VULNERABLE_PACKAGES, "requests", {"vulnerable_below": "2.26.0", "cve": "CVE-9999"})
     except Exception:
         pass
 
@@ -97,7 +97,7 @@ def test_integrated_pipeline_exposes_l1_normalized_outputs(monkeypatch, tmp_path
     (tmp_path / "requirements.txt").write_text("requests==2.0.0\n", encoding="utf-8")
     try:
         import config
-        config.VULNERABLE_PACKAGES["requests"] = {"vulnerable_below": "2.26.0", "cve": "CVE-9999"}
+        monkeypatch.setitem(config.VULNERABLE_PACKAGES, "requests", {"vulnerable_below": "2.26.0", "cve": "CVE-9999"})
     except Exception:
         pass
 
@@ -166,7 +166,7 @@ def test_deduplicate_findings_merges_metadata_without_losing_signal():
     assert finding.code_snippet == "cursor.execute(query % user_input)"
 
 
-def test_sbom_scanner_is_target_aware(tmp_path):
+def test_sbom_scanner_is_target_aware(tmp_path, monkeypatch):
     # project structure with package.json and requirements
     project = tmp_path / "project"
     project.mkdir()
@@ -176,7 +176,7 @@ def test_sbom_scanner_is_target_aware(tmp_path):
     # vulnerable package configured in config.py optionally; fallback by dynamic injection
     try:
         from config import VULNERABLE_PACKAGES
-        VULNERABLE_PACKAGES["requests"] = {"vulnerable_below": "2.26.0", "cve": "CVE-XXXX"}
+        monkeypatch.setitem(VULNERABLE_PACKAGES, "requests", {"vulnerable_below": "2.26.0", "cve": "CVE-XXXX"})
     except ImportError:
         pass
 

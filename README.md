@@ -1,25 +1,44 @@
 # VSH
 
-<div align="center">
+> **Upstream 기반 fork · 개인 확장 기록 공개**  
+> 원본: [vmfmgl0607/VSH](https://github.com/vmfmgl0607/VSH). 이 fork에서 **Semgrep·도구 설정 연동, Finding v1.0 export, 검증·아키텍처 문서**를 확장했습니다. 아래 기여 표에서 실제 변경 파일과 커밋을 확인할 수 있습니다.
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f172a,45:2563eb,100:22c55e&height=180&section=header&text=VSH&fontSize=64&fontColor=ffffff&animation=fadeIn&fontAlignY=36&desc=Desktop-first%20Application%20Security%20Verification%20Platform&descAlignY=58&descAlign=50" alt="VSH banner" />
+## 한눈에 보기
 
-<br />
+**문제:** 정적 분석 경고만으로는 위험의 근거와 수정 우선순위를 파악하기 어렵습니다.  
+**접근:** 소스코드·의존성의 탐지 결과에 설명과 수정 방향을 붙이고, React/Electron UI와 FastAPI 분석 경로로 연결합니다.  
+**범위:** AppSec 프로토타입입니다. 탐지 후보·mock 설명·선택형 검증 결과를 구분하며, 탐지 자체가 실제 악용 가능성을 증명하지 않습니다.
 
-<b>AI 코드 생성 시대를 위한 데스크톱 중심 보안 분석 플랫폼</b>
+[실행 화면](#실행-화면) · [My Contributions](#my-contributions) · [검증과 한계](#검증과-한계) · [아키텍처](#3-architecture) · [실행 방법](#7-quick-start)
 
-<br />
-<br />
+## 실행 화면
 
-[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)](#)
-[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)](#)
-[![Electron](https://img.shields.io/badge/Electron-Desktop-47848F?style=for-the-badge&logo=electron&logoColor=white)](#)
-[![React](https://img.shields.io/badge/React-UI-61DAFB?style=for-the-badge&logo=react&logoColor=111111)](#)
-[![Security](https://img.shields.io/badge/Security-SAST%20%2B%20SBOM%20%2B%20L3-ef4444?style=for-the-badge)](#)
+![VSH 로컬 fixture 분석 화면](docs/assets/vsh-local-demo.png)
 
-</div>
+실제 저장소의 React UI와 FastAPI를 로컬에서 실행한 화면입니다. 입력은 `tests/fixtures/vuln_project`, L2는 **mock**, L3는 **비활성**입니다. Electron 패키징·실제 LLM·SonarQube·PoC 실행의 검증 증거는 아닙니다. [재현 조건과 검증 기록](docs/portfolio-verification.md)을 함께 확인해 주세요.
 
----
+## My Contributions
+
+| 확인 가능한 변경 | 근거 |
+| --- | --- |
+| 실제 Semgrep CLI 실행 경로와 기존 L1 통합, 도구 감지·설정 UI 연계 | [변경 커밋](https://github.com/rasasoe/VSH/commit/ec15330c937432141ac62ae039c4b8f003f34546) |
+| Windows 환경의 Semgrep·Syft Docker wrapper, 로컬 SonarQube 설정 지원 | [wrapper](https://github.com/rasasoe/VSH/commit/0ec3f068e3402d1e4350990e5a4b51f03dd416d9) · [SonarQube 설정](https://github.com/rasasoe/VSH/commit/1a7e755e36cab8dafd6a0e40d1a392c0a74719be) |
+| Finding v1.0 어댑터, CLI `--out-dir`, runtime 계약 테스트·CI 추가 | [PR #1의 코드 diff](https://github.com/rasasoe/VSH/pull/1/files) |
+| 구조·실행·검증 경계 문서화 | [README 개편 커밋](https://github.com/rasasoe/VSH/commit/0f2f73c5ca6242f29926bf977edfa2d092050ab7) |
+
+이 표는 변경 이력을 설명하며, 커밋 작성자 정보만으로 원본 코드 전체의 저작·담당 범위를 확대하지 않습니다. 원본 팀의 세부 역할 분담과 개인 확장 작업은 구분합니다.
+
+## 검증과 한계
+
+2026-09-16 재검증: **전체 unit 테스트 81개 통과**, **역순 실행 81개 통과**, **React production build 통과**. 실제 fixture 분석 화면에서 집계·설명·미검증 표시도 확인했습니다.
+
+- 이전 15개 실패와 1개 skip의 원인·수정 방법, 테스트 범위는 [검증 기록](docs/portfolio-verification.md)에 공개합니다.
+- API 키 없는 mock 설명은 실제 LLM 품질 평가가 아닙니다.
+- 기본 분석 응답의 L3 값은 미검증 상태일 수 있습니다. 외부 검증은 선택적이며 백그라운드에서 실행됩니다.
+- 공통 Finding 출력은 구현되어 있지만 세 도구를 모으는 통합 대시보드는 아직 없습니다.
+
+<details>
+<summary>기술 문서 목차 펼치기</summary>
 
 ## Table of Contents
 
@@ -41,6 +60,8 @@
 - [16. Current Limitations](#16-current-limitations)
 - [17. Roadmap](#17-roadmap)
 
+</details>
+
 ---
 
 ## 1. What is VSH?
@@ -58,7 +79,7 @@ VSH는 단순히 취약점을 찾는 데서 끝나지 않습니다. 빠른 정�
 Select Project
    → L1 Static Detection
    → L2 Reasoning
-   → L3 Verification
+   → Optional L3 Verification (background)
    → Desktop Dashboard
    → Fix / Annotation Preview
 ```
@@ -163,8 +184,9 @@ graph TD
     B --> C{Finding?}
     C -- No --> Z[Clean / No finding]
     C -- Yes --> D[L2: Reasoning]
-    D --> E[L3: Optional Verification]
-    E --> F[Unified Finding Schema]
+    D --> F[Unified Finding Schema]
+    D -. optional background .-> E[L3: Optional Verification]
+    E -. available validation signals .-> F
     F --> G[Desktop Dashboard]
     F --> H[JSON Report]
     F --> I[Annotation Preview]

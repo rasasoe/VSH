@@ -10,18 +10,21 @@ interface Finding {
   message: string;
   evidence: string;
   reachability_status: string;
-  reachability_confidence: number;
+  reachability_confidence: number | null;
+  reachability_confidence_basis?: number | string | null;
   l2_reasoning: {
-    is_vulnerable: boolean;
-    confidence: number;
+    is_vulnerable: boolean | null;
+    verdict?: string;
+    provider?: string;
+    confidence: number | null;
     reasoning: string;
     attack_scenario: string;
     fix_suggestion: string;
   };
   l3_validation: {
-    validated: boolean;
-    exploit_possible: boolean;
-    confidence: number;
+    validated: boolean | null;
+    exploit_possible: boolean | null;
+    confidence: number | null;
     evidence: string;
     recommended_fix: string;
   };
@@ -45,7 +48,9 @@ function DetailPanel({ finding }: DetailPanelProps) {
     }
   };
 
-  const getConfidenceColor = (confidence: number) => {
+  const formatConfidence = (confidence: number | null) => typeof confidence === 'number' && Number.isFinite(confidence) ? `${Math.round(confidence * 100)}%` : 'Not available';
+  const getConfidenceColor = (confidence: number | null) => {
+    if (confidence == null || !Number.isFinite(confidence)) return '#6c757d';
     if (confidence >= 0.8) return '#1b5e20';
     if (confidence >= 0.6) return '#ef6c00';
     return '#b71c1c';
@@ -65,7 +70,7 @@ function DetailPanel({ finding }: DetailPanelProps) {
         <p>
           <strong>Reachability:</strong> {finding.reachability_status}{' '}
           <span style={{ color: getConfidenceColor(finding.reachability_confidence) }}>
-            ({Math.round(finding.reachability_confidence * 100)}%)
+            ({formatConfidence(finding.reachability_confidence)}{typeof finding.reachability_confidence_basis === 'string' ? `; heuristic: ${finding.reachability_confidence_basis}` : ''})
           </span>
         </p>
       </div>
@@ -73,15 +78,16 @@ function DetailPanel({ finding }: DetailPanelProps) {
       <div style={{ backgroundColor: '#e8f4fd', padding: 15, borderRadius: 8, marginBottom: 15, border: '2px solid #2196F3' }}>
         <h3>L2 Reasoning</h3>
         <p>
-          <strong>Vulnerable:</strong>{' '}
-          <span style={{ color: finding.l2_reasoning.is_vulnerable ? '#d32f2f' : '#2e7d32', fontWeight: 'bold' }}>
-            {finding.l2_reasoning.is_vulnerable ? 'YES' : 'NO'}
+          <strong>Assessment:</strong>{' '}
+          <span style={{ color: finding.l2_reasoning.is_vulnerable == null ? '#6c757d' : finding.l2_reasoning.is_vulnerable ? '#d32f2f' : '#2e7d32', fontWeight: 'bold' }}>
+            {finding.l2_reasoning.verdict || 'needs_review'}
           </span>
         </p>
+        <p><strong>Provider:</strong> {finding.l2_reasoning.provider || 'unknown'} — assessment, not proof of exploitability</p>
         <p>
           <strong>Confidence:</strong>{' '}
           <span style={{ color: getConfidenceColor(finding.l2_reasoning.confidence) }}>
-            {Math.round(finding.l2_reasoning.confidence * 100)}%
+            {formatConfidence(finding.l2_reasoning.confidence)}
           </span>
         </p>
         <p><strong>Reasoning:</strong></p>
@@ -103,13 +109,13 @@ function DetailPanel({ finding }: DetailPanelProps) {
         <p>
           <strong>Validated:</strong>{' '}
           <span style={{ color: finding.l3_validation.validated ? '#2e7d32' : '#b71c1c', fontWeight: 'bold' }}>
-            {finding.l3_validation.validated ? 'YES' : 'NO'}
+            {finding.l3_validation.validated == null ? 'NOT RUN / PENDING' : finding.l3_validation.validated ? 'YES' : 'NOT CONFIRMED'}
           </span>
         </p>
         <p>
           <strong>Exploit Possible:</strong>{' '}
-          <span style={{ color: finding.l3_validation.exploit_possible ? '#d32f2f' : '#2e7d32', fontWeight: 'bold' }}>
-            {finding.l3_validation.exploit_possible ? 'YES - EXPLOITABLE' : 'NO'}
+          <span style={{ color: finding.l3_validation.exploit_possible == null ? '#6c757d' : finding.l3_validation.exploit_possible ? '#d32f2f' : '#2e7d32', fontWeight: 'bold' }}>
+            {finding.l3_validation.exploit_possible == null ? 'UNKNOWN' : finding.l3_validation.exploit_possible ? 'INDICATED BY VALIDATOR' : 'NOT DEMONSTRATED'}
           </span>
         </p>
         {finding.l3_validation.exploit_possible && (
@@ -120,7 +126,7 @@ function DetailPanel({ finding }: DetailPanelProps) {
         <p>
           <strong>Confidence:</strong>{' '}
           <span style={{ color: getConfidenceColor(finding.l3_validation.confidence) }}>
-            {Math.round(finding.l3_validation.confidence * 100)}%
+            {formatConfidence(finding.l3_validation.confidence)}
           </span>
         </p>
         <p><strong>Evidence:</strong></p>

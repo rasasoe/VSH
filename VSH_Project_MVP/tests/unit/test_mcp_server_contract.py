@@ -4,7 +4,8 @@ import types
 from pathlib import Path
 
 
-SERVER_PATH = Path(__file__).resolve().parent.parent / "tools" / "server.py"
+# Load a fresh implementation per test, rather than reusing the wrapper's cached module.
+SERVER_PATH = Path(__file__).resolve().parents[2] / "interfaces" / "mcp" / "server.py"
 
 
 class FakeLogRepo:
@@ -113,12 +114,16 @@ def test_server_exposes_documented_mcp_tool_names(monkeypatch):
     module = _load_server_module(monkeypatch)
 
     assert sorted(module.mcp.registered_tools.keys()) == [
+        "analyze_file",
+        "analyze_project",
         "apply_fix",
         "dismiss_issue",
+        "get_diagnostics",
         "get_log",
         "get_results",
         "scan_only",
         "validate_code",
+        "watch_project",
     ]
 
 

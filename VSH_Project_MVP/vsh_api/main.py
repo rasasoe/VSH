@@ -23,6 +23,7 @@ from shared.runtime_settings import (
 from vsh_runtime.engine import VshRuntimeEngine
 from vsh_runtime.l3_integration import get_l3_runner, initialize_l3
 from vsh_runtime.watcher import ProjectWatcher
+from vsh_api.response import normalize_response
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -338,63 +339,3 @@ def get_file_content(path: str):
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-
-def normalize_response(result: dict, mode: str, target: str) -> dict:
-    findings = []
-    for v in result.get("vuln_records", []):
-        finding = {
-            "id": v.get("vuln_id"),
-            "file": v.get("file_path"),
-            "line": v.get("line_number"),
-            "end_line": v.get("end_line_number", v.get("line_number")),
-            "severity": v.get("severity"),
-            "rule_id": v.get("rule_id"),
-            "message": v.get("evidence"),
-            "evidence": v.get("evidence"),
-            "reachability_status": v.get("reachability_status"),
-            "reachability_confidence": v.get("reachability_confidence", 0.0),
-            "l2_reasoning": {
-                "is_vulnerable": v.get("is_vulnerable", False),
-                "confidence": v.get("l2_confidence", 0.0),
-                "reasoning": v.get("reasoning_verdict", ""),
-                "attack_scenario": v.get("l3_attack_scenario", ""),
-                "fix_suggestion": v.get("fix_suggestion", ""),
-            },
-            "l3_validation": {
-                "validated": v.get("l3_validated", False),
-                "exploit_possible": v.get("exploit_possible", False),
-                "confidence": v.get("l3_confidence", 0.0),
-                "evidence": v.get("evidence", ""),
-                "recommended_fix": v.get("fix_suggestion", ""),
-            },
-        }
-        findings.append(finding)
-
-    summary = result.get("aggregate_summary", {})
-    top_risky_files = sorted(
-        [
-            (
-                file_path,
-                len([v for v in result.get("vuln_records", []) if v.get("file_path") == file_path]),
-            )
-            for file_path in set(v.get("file_path") for v in result.get("vuln_records", []))
-        ],
-        key=lambda item: item[1],
-        reverse=True,
-    )[:5]
-
-    return {
-        "target": target,
-        "mode": mode,
-        "findings": findings,
-        "summary": {
-            "total": len(findings),
-            "critical": summary.get("risk_distribution", {}).get("P1", 0),
-            "high": summary.get("risk_distribution", {}).get("P2", 0),
-            "medium": summary.get("risk_distribution", {}).get("P3", 0),
-            "low": summary.get("risk_distribution", {}).get("P4", 0)
-            + summary.get("risk_distribution", {}).get("INFO", 0),
-            "top_risky_files": top_risky_files,
-        },
-    }

@@ -1,26 +1,15 @@
 import os
 import json
 import pytest
-import requests
+from fastapi.testclient import TestClient
+from pathlib import Path
 from dotenv import load_dotenv
 from config import LOG_PATH as DEFAULT_LOG_PATH
 from pipeline import PipelineFactory
 
 load_dotenv()
 
-BASE_URL = "http://localhost:3000"
-
-def is_server_running():
-    try:
-        requests.get(BASE_URL, timeout=1)
-        return True
-    except Exception:
-        return False
-
-requires_server = pytest.mark.skipif(
-    not is_server_running(),
-    reason=f"Dashboard 서버가 실행 중이 아닙니다. uvicorn dashboard.app:app --port 3000 실행 후 재시도"
-)
+BASE_URL = 'http://testserver'
 
 # log.json 경로 가져오기
 LOG_PATH = os.getenv("LOG_PATH", DEFAULT_LOG_PATH)
@@ -34,7 +23,7 @@ def _clear_log_json():
         print(f"Error clearing {LOG_PATH}: {e}")
 
 @pytest.fixture(autouse=True)
-def reset_log_json():
+def reset_log_json(isolated_repositories):
     # setup: 테스트 시작 전 초기화
     _clear_log_json()
     yield
@@ -48,9 +37,18 @@ def pipeline(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     return PipelineFactory.create()
 
-def test_e2e_scan_vulnerable_file(pipeline):
+@pytest.fixture
+def targets(tmp_path):
+    source_dir = Path(__file__).resolve().parents[1] / 'e2e'
+    for name in ('e2e_target.py', 'e2e_target_fixed.py'):
+        (tmp_path / name).write_bytes((source_dir / name).read_bytes())
+    # Offline advisory fixture; this declaration is scanned, never installed.
+    (tmp_path / 'requirements.txt').write_text('requests==2.9.0\n', encoding='utf-8')
+    return tmp_path
+
+def test_e2e_scan_vulnerable_file(pipeline, targets):
     """시나리오 1 — 취약 파일 스캔 검증"""
-    result = pipeline.run("tests/e2e_target.py")
+    result = pipeline.run(str(targets / 'e2e_target.py'))
     
     assert result["is_clean"] is False
     assert len(result["scan_results"]) > 0
@@ -96,11 +94,12 @@ def test_e2e_scan_vulnerable_file(pipeline):
     assert result["summary"]["decision_confirmed_total"] >= 1
     assert result["summary"]["confidence_high_total"] >= 1
 
-@requires_server
-def test_e2e_dashboard_api(pipeline):
+def test_e2e_dashboard_api(pipeline, targets):
     """시나리오 2 — Dashboard API 검증"""
     # 1. 파일 스캔하여 데이터 생성
-    pipeline.run("tests/e2e_target.py")
+    pipeline.run(str(targets / 'e2e_target.py'))
+    from dashboard.app import app
+    requests = TestClient(app)
     
     # 2. GET /api/logs 호출
     response = requests.get(f"{BASE_URL}/api/logs")
@@ -160,17 +159,17 @@ def test_e2e_dashboard_api(pipeline):
     not_found_response = requests.post(f"{BASE_URL}/api/logs/nonexistent_id/accept")
     assert not_found_response.status_code == 404
 
-def test_e2e_rescan_fixed_file(pipeline):
+def test_e2e_rescan_fixed_file(pipeline, targets):
     """시나리오 3 — 수정된 파일 재스캔 검증"""
-    result = pipeline.run("tests/e2e_target_fixed.py")
+    result = pipeline.run(str(targets / 'e2e_target_fixed.py'))
     
     cwe_ids = [v["cwe_id"] for v in result["scan_results"]]
     assert "CWE-89" not in cwe_ids, f"CWE-89 오탐 발생. 현재 탐지: {cwe_ids}"
     assert "CWE-798" not in cwe_ids, f"CWE-798 오탐 발생. 현재 탐지: {cwe_ids}"
 
-def test_e2e_log_history(pipeline):
+def test_e2e_log_history(pipeline, targets):
     """시나리오 4 — log.json 전체 이력 검증"""
-    pipeline.run("tests/e2e_target.py")
+    pipeline.run(str(targets / 'e2e_target.py'))
     
     logs = pipeline.log_repo.find_all()
     assert len(logs) > 0
