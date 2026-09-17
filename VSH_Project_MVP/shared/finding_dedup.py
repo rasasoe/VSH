@@ -36,6 +36,11 @@ def _merge_findings(base: Vulnerability, incoming: Vulnerability) -> Vulnerabili
     meta = dict(base.metadata)
     for k, v in incoming.metadata.items():
         meta.setdefault(k, v)
+    # Merge duplicate locations while retaining evidence from every detector rule.
+    meta['merged_rule_ids'] = list(dict.fromkeys(rule for rule in [
+        *base.metadata.get('merged_rule_ids', []), base.rule_id,
+        *incoming.metadata.get('merged_rule_ids', []), incoming.rule_id,
+    ] if rule))
     return base.model_copy(update={
         "rule_id": base.rule_id or incoming.rule_id,
         "severity": base.severity if _SEVERITY_RANK.get(base.severity, 0) >= _SEVERITY_RANK.get(incoming.severity, 0) else incoming.severity,
