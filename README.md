@@ -1,5 +1,8 @@
 # VSH
 
+<p align="center"><b>🌐 Language</b> &nbsp; <strong>🇰🇷 한국어</strong> &nbsp; | &nbsp; <a href="README.en.md">🇺🇸 English</a></p>
+
+
 > **Upstream 기반 fork · 개인 확장 기록 공개**  
 > 원본: [vmfmgl0607/VSH](https://github.com/vmfmgl0607/VSH). 이 fork에서 **Semgrep·도구 설정 연동, Finding v1.0 export, 검증·아키텍처 문서**를 확장했습니다. 아래 기여 표에서 실제 변경 파일과 커밋을 확인할 수 있습니다.
 
