@@ -7,11 +7,11 @@
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
-![Electron](https://img.shields.io/badge/Electron-47848F?logo=electron&logoColor=white)
-![Focus](https://img.shields.io/badge/Focus-Application%20Security-334155)
-![Status](https://img.shields.io/badge/Status-Prototype-E7AA42)
+<a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white"/></a>
+<img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white"/>
+<img alt="Electron" src="https://img.shields.io/badge/Electron-47848F?logo=electron&logoColor=white"/>
+<img alt="Focus" src="https://img.shields.io/badge/Focus-Application%20Security-334155"/>
+<img alt="Status" src="https://img.shields.io/badge/Status-Prototype-E7AA42"/>
 
 **Source code and dependency findings, explained and reviewed through a desktop-oriented AppSec workflow.**
 
