@@ -8,9 +8,17 @@
 > **Upstream 기반 fork · 개인 확장 기록 공개**  
 > 원본: [vmfmgl0607/VSH](https://github.com/vmfmgl0607/VSH). 이 fork에서 **Semgrep·도구 설정 연동, Finding v1.0 export, 검증·아키텍처 문서**를 확장했습니다. 아래 기여 표에서 실제 변경 파일과 커밋을 확인할 수 있습니다.
 
-## 3단계 분석 설계
+## 개발 배경 — 바이브 코딩의 보안 문제를 개발 중에 해결할 수 있을까?
 
-VSH는 단순 정적 분석기가 아니라 **L1 탐지 → L2 LLM 기반 설명 → 선택적 L3 PoC 생성·검증 → 결과 보고**까지 연결하는 AppSec 프로토타입을 목표로 개발되었습니다.
+**VSH(Vibe Coding Secure Helper)**는 AI가 빠르게 코드를 작성하는 바이브 코딩 환경에서 보안 취약점도 빠르게 유입될 수 있다는 문제의식에서 시작한 **MCP 기반 실시간 보안 분석 도우미**입니다.
+
+목표는 **파일 변경 감지 → 취약점 후보 탐지 → LLM 설명 및 수정 코드 제안 → 필요 시 심화 검증**을 개발 과정 안에서 이어 주는 것입니다. L1·L2·L3는 내부 분석 파이프라인이며, MCP는 AI 코딩 도구에 기능을 노출하는 연결 방식입니다.
+
+**최종 팀 제출본과 개인 확장은 다릅니다.** [팀 최종 제출본(MVP-final)](https://github.com/vmfmgl0607/VSH/tree/MVP-final)은 FastMCP 도구와 파일 변경 감시 데모를 포함합니다. 이 저장소는 그 결과를 바탕으로 개인적으로 Semgrep CLI 연동, React/Electron UI, Finding export 및 재검증을 확장·정리한 포크입니다.
+
+**작동 범위:** 팀 최종본의 파일 감시 데모는 지정된 `vuln_sample.py`를 대상으로 합니다. MCP의 `apply_fix`는 제안된 수정 코드를 반환하고 이슈 상태를 바꾸지만 실제 소스 파일을 자동 수정하지는 않습니다.
+
+## L1 · L2 · L3 분석 파이프라인
 
 <picture>
   <source media="(max-width: 600px)" srcset="docs/assets/vsh-workflow-mobile.svg">
@@ -23,13 +31,13 @@ VSH는 단순 정적 분석기가 아니라 **L1 탐지 → L2 LLM 기반 설명
 | **L2 — LLM 설명** | LLM 및 RAG 문맥으로 위험 근거, 공격 시나리오, 수정 방안 설명 | Provider 연동 구조 존재. 공개 데모에서는 mock 설명 사용 |
 | **L3 — PoC 생성 및 검증** | PoC 템플릿·생성 경로와 격리된 재현 검증; SonarQube·SBOM 정보로 보강 | 선택형 확장 구조. 실제 PoC 생성·실행의 종단 간 성공은 미검증 |
 
-**해석 기준:** L2의 설명은 취약점의 실제 악용 가능성을 증명하지 않습니다. L3 검증 결과가 없는 탐지 후보를 확정된 취약점으로 표현하지 않습니다.
+**범위:** L2 설명만으로 실제 악용 가능성을 확정하지 않으며, L3 검증되지 않은 탐지 결과는 후보로 구분합니다.
 
-## 검증 목적과 확인된 결과
+## 개발 목표와 실제 확인한 결과
 
-**확인된 작업·검증 기록:** 2026.02–2026.09 (프로젝트 전체 착수·종료 기간은 미확인)
+**팀 프로젝트 최종 제출:** 2026.02 · **개인 확장·재검증 기록:** 2026.09 (최초 개발 착수일은 확인되지 않음)
 
-기존 정적 분석 도구를 새로 만드는 것보다, **탐지 결과가 개발자가 다시 확인하고 수정할 수 있는 근거로 전달되는가**를 검증하고자 했습니다. 특히 실제 Semgrep 실행 경로, 사용자 인터페이스 표시, 공통 Finding JSON 출력을 연결하는 것이 목표였습니다.
+**기획 목표:** 바이브 코딩 중 코드 저장·변경 시 보안 위험을 가능한 한 빠르게 알려주고, **왜 위험한지 설명하며 수정안을 제시**하는 개발 보조 시스템을 만드는 것이었습니다. 개인 포크에서는 분석 결과의 UI 표시·추적 가능한 Finding JSON 출력을 추가로 다듬었습니다.
 
 - **검증 근거:** 2026-09-16 기준 단위 테스트 81개 및 역순 실행 81개 통과, React 빌드 및 로컬 fixture 분석 UI 확인
 - **남은 검증:** 실제 LLM 설명의 정확도, L3 PoC 생성·실행 종단 간 검증, 실환경의 오탐·미탐 측정. mock 데이터와 탐지 후보를 실제 검증 결과로 표현하지 않습니다.
@@ -97,7 +105,7 @@ VSH는 단순 정적 분석기가 아니라 **L1 탐지 → L2 LLM 기반 설명
 
 ## 1. What is VSH?
 
-**VSH(Vibe Secure Hook)** 는 AI 코드 생성 시대에 맞춰 설계한 **Desktop-first Application Security Verification Platform**입니다.
+**VSH(Vibe Coding Secure Helper)**는 AI 코드 생성 환경에서 파일 변경과 취약점 탐지·설명·수정 제안·선택형 검증을 개발 과정에 연결하려고 만든 **MCP 기반 AppSec 도우미**입니다. 현재 이 포크에는 React/Electron 데스크톱 UI와 FastAPI 분석 경로도 있습니다.
 
 VSH는 단순히 취약점을 찾는 데서 끝나지 않습니다. 빠른 정적 탐지 결과를 LLM reasoning, SBOM, SonarQube, annotation preview와 연결하여 사용자가 다음 질문까지 바로 확인할 수 있도록 설계되었습니다.
 
@@ -121,7 +129,7 @@ Select Project
 
 | Value | Description |
 |---|---|
-| Desktop-first | CLI만 쓰는 도구가 아니라, Electron UI에서 프로젝트 선택부터 결과 확인까지 수행 |
+| AI 코딩 환경 연동 | 팀 제출본에 FastMCP 서버와 파일 변경 감시 데모 포함; 이 포크는 별도 UI 중심 |
 | Explainable Security | 단순 탐지 메시지가 아니라 reasoning, attack scenario, fix suggestion 제공 |
 | Hybrid L1 | 실제 Semgrep CLI와 내부 휴리스틱 탐지 계층을 함께 사용 |
 | Expandable L3 | SonarQube, SBOM, PoC 검증 경로로 심화 가능 |
