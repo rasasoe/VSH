@@ -1,83 +1,60 @@
-<p align="center"><img src="docs/assets/portfolio-banner.svg" width="100%" alt="VSH — Application Security"></p>
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/assets/portfolio-banner-mobile.svg">
+  <img src="docs/assets/portfolio-banner.svg" width="100%" alt="VSH — 바이브 코딩 보안 도우미">
+</picture>
 
-# VSH
+<p align="right"><strong>한국어</strong> / <a href="README.en.md">English</a></p>
 
-<p align="center"><b>🌐 Language</b> &nbsp; <strong>🇰🇷 한국어</strong> &nbsp; | &nbsp; <a href="README.en.md">🇺🇸 English</a></p>
+# VSH — Vibe Coding Secure Helper
 
+**MCP 기반 보안 분석 도우미 · L1 탐지 · L2 LLM 설명 · L3 PoC 검증**  
+**팀 프로젝트 최종 제출:** 2026.02 · **개인 포크 보완·재검증:** 2026.09
 
-> **Upstream 기반 fork · 개인 확장 기록 공개**  
-> 원본: [vmfmgl0607/VSH](https://github.com/vmfmgl0607/VSH). 이 fork에서 **Semgrep·도구 설정 연동, Finding v1.0 export, 검증·아키텍처 문서**를 확장했습니다. 아래 기여 표에서 실제 변경 파일과 커밋을 확인할 수 있습니다.
+## 기획: AI가 코드를 작성하는 동안 보안 문제도 함께 찾아준다면?
 
-## 개발 배경 — 바이브 코딩의 보안 문제를 개발 중에 해결할 수 있을까?
+바이브 코딩으로 코드 생성이 빨라지는 만큼 취약한 코드도 쉽게 만들어질 수 있습니다. VSH는 개발자가 작업하던 흐름을 끊지 않고 **코드 저장·변경 감지 → 취약점 후보 탐지 → LLM 설명·수정 제안 → 선택적 재현 검증**으로 이어 주는 보안 도우미를 목표로 했습니다.
 
-**VSH(Vibe Coding Secure Helper)**는 AI가 빠르게 코드를 작성하는 바이브 코딩 환경에서 보안 취약점도 빠르게 유입될 수 있다는 문제의식에서 시작한 **MCP 기반 실시간 보안 분석 도우미**입니다.
+팀 최종 제출본은 **FastMCP 서버와 지정된 파일 변경 감시 데모**를 포함합니다. [팀 최종 제출본 — MVP-final](https://github.com/vmfmgl0607/VSH/tree/MVP-final)
 
-목표는 **파일 변경 감지 → 취약점 후보 탐지 → LLM 설명 및 수정 코드 제안 → 필요 시 심화 검증**을 개발 과정 안에서 이어 주는 것입니다. L1·L2·L3는 내부 분석 파이프라인이며, MCP는 AI 코딩 도구에 기능을 노출하는 연결 방식입니다.
+이 저장소는 팀 결과물을 기반으로 **Semgrep CLI 연동과 설정, Windows 도구 실행, Finding v1.0 JSON 출력, React/Electron 분석 화면 및 검증 작업**을 확장한 개인 포크입니다. 팀 결과를 개인 단독 개발로 표현하지 않습니다.
 
-**최종 팀 제출본과 개인 확장은 다릅니다.** [팀 최종 제출본(MVP-final)](https://github.com/vmfmgl0607/VSH/tree/MVP-final)은 FastMCP 도구와 파일 변경 감시 데모를 포함합니다. 이 저장소는 그 결과를 바탕으로 개인적으로 Semgrep CLI 연동, React/Electron UI, Finding export 및 재검증을 확장·정리한 포크입니다.
-
-**작동 범위:** 팀 최종본의 파일 감시 데모는 지정된 `vuln_sample.py`를 대상으로 합니다. MCP의 `apply_fix`는 제안된 수정 코드를 반환하고 이슈 상태를 바꾸지만 실제 소스 파일을 자동 수정하지는 않습니다.
-
-## L1 · L2 · L3 분석 파이프라인
+## 핵심 분석 흐름
 
 <picture>
   <source media="(max-width: 600px)" srcset="docs/assets/vsh-workflow-mobile.svg">
-  <img src="docs/assets/vsh-workflow.svg" width="100%" alt="VSH L1 정적 분석, L2 LLM 설명, L3 PoC 생성 및 검증 흐름">
+  <img src="docs/assets/vsh-workflow.svg" width="100%" alt="L1 정적 탐지 → L2 LLM 설명 → 선택적 L3 PoC 생성·검증">
 </picture>
 
-| 계층 | 역할 | 확인된 상태 |
-| --- | --- | --- |
-| **L1 — 취약점 탐지** | Semgrep·규칙·구조 분석으로 코드/의존성 취약점 후보를 식별 | Semgrep 실행 경로 및 로컬 fixture 테스트 확인 |
-| **L2 — LLM 설명** | LLM 및 RAG 문맥으로 위험 근거, 공격 시나리오, 수정 방안 설명 | Provider 연동 구조 존재. 공개 데모에서는 mock 설명 사용 |
-| **L3 — PoC 생성 및 검증** | PoC 템플릿·생성 경로와 격리된 재현 검증; SonarQube·SBOM 정보로 보강 | 선택형 확장 구조. 실제 PoC 생성·실행의 종단 간 성공은 미검증 |
+- **L1 · 정적 탐지:** Semgrep과 규칙 기반 분석으로 코드·의존성의 취약점 후보 식별
+- **L2 · LLM 설명:** 탐지 근거·공격 시나리오·수정 방향을 LLM/RAG 문맥으로 설명하도록 설계
+- **L3 · PoC 생성·검증:** 선택적 PoC 템플릿·생성과 통제된 검증 경로, SonarQube/SBOM 신호로 보강
 
-**범위:** L2 설명만으로 실제 악용 가능성을 확정하지 않으며, L3 검증되지 않은 탐지 결과는 후보로 구분합니다.
+**검증 상태:** L1과 데이터 출력·UI의 로컬 테스트 근거가 있습니다. 공개 데모의 L2 설명은 mock이며, L3 실제 PoC 생성·실행의 종단 간 성공은 입증하지 않았습니다.
 
-## 개발 목표와 실제 확인한 결과
+## 구현 화면과 결과
 
-**팀 프로젝트 최종 제출:** 2026.02 · **개인 확장·재검증 기록:** 2026.09 (최초 개발 착수일은 확인되지 않음)
+<p align="center"><img src="docs/assets/vsh-local-demo.png" width="100%" alt="VSH 로컬 취약 코드 fixture 분석 화면"></p>
 
-**기획 목표:** 바이브 코딩 중 코드 저장·변경 시 보안 위험을 가능한 한 빠르게 알려주고, **왜 위험한지 설명하며 수정안을 제시**하는 개발 보조 시스템을 만드는 것이었습니다. 개인 포크에서는 분석 결과의 UI 표시·추적 가능한 Finding JSON 출력을 추가로 다듬었습니다.
+- **검증된 테스트:** 2026-09-16 기준 81개 단위 테스트, 역순 실행 81개, React 프로덕션 빌드 통과
+- **팀 제출본의 MCP 도구:** `validate_code`, `scan_only`, `apply_fix`, `scan_project` 등을 등록. `apply_fix`는 수정 코드 반환 및 상태 변경이며 실제 파일 자동 수정은 아님
+- **범위:** 팀 파일 감시 데모는 지정된 샘플 파일 대상. 전체 IDE·프로젝트 자동 감시 또는 실환경 탐지 정확도까지 확인한 결과는 아님
 
-- **검증 근거:** 2026-09-16 기준 단위 테스트 81개 및 역순 실행 81개 통과, React 빌드 및 로컬 fixture 분석 UI 확인
-- **남은 검증:** 실제 LLM 설명의 정확도, L3 PoC 생성·실행 종단 간 검증, 실환경의 오탐·미탐 측정. mock 데이터와 탐지 후보를 실제 검증 결과로 표현하지 않습니다.
+## 담당 작업과 설계상 구분
 
-## 한눈에 보기
-
-**문제:** 정적 분석 경고만으로는 위험의 근거와 수정 우선순위를 파악하기 어렵습니다.  
-**접근:** 소스코드·의존성의 탐지 결과에 설명과 수정 방향을 붙이고, React/Electron UI와 FastAPI 분석 경로로 연결합니다.  
-**범위:** AppSec 프로토타입입니다. 탐지 후보·mock 설명·선택형 검증 결과를 구분하며, 탐지 자체가 실제 악용 가능성을 증명하지 않습니다.
-
-[실행 화면](#실행-화면) · [My Contributions](#my-contributions) · [검증과 한계](#검증과-한계) · [아키텍처](#3-architecture) · [실행 방법](#7-quick-start)
-
-## 실행 화면
-
-![VSH 로컬 fixture 분석 화면](docs/assets/vsh-local-demo.png)
-
-실제 저장소의 React UI와 FastAPI를 로컬에서 실행한 화면입니다. 입력은 `tests/fixtures/vuln_project`, L2는 **mock**, L3는 **비활성**입니다. Electron 패키징·실제 LLM·SonarQube·PoC 실행의 검증 증거는 아닙니다. [재현 조건과 검증 기록](docs/portfolio-verification.md)을 함께 확인해 주세요.
-
-## My Contributions
-
-| 확인 가능한 변경 | 근거 |
+| 구분 | 작업 |
 | --- | --- |
-| 실제 Semgrep CLI 실행 경로와 기존 L1 통합, 도구 감지·설정 UI 연계 | [변경 커밋](https://github.com/rasasoe/VSH/commit/ec15330c937432141ac62ae039c4b8f003f34546) |
-| Windows 환경의 Semgrep·Syft Docker wrapper, 로컬 SonarQube 설정 지원 | [wrapper](https://github.com/rasasoe/VSH/commit/0ec3f068e3402d1e4350990e5a4b51f03dd416d9) · [SonarQube 설정](https://github.com/rasasoe/VSH/commit/1a7e755e36cab8dafd6a0e40d1a392c0a74719be) |
-| Finding v1.0 어댑터, CLI `--out-dir`, runtime 계약 테스트·CI 추가 | [PR #1의 코드 diff](https://github.com/rasasoe/VSH/pull/1/files) |
-| 구조·실행·검증 경계 문서화 | [README 개편 커밋](https://github.com/rasasoe/VSH/commit/0f2f73c5ca6242f29926bf977edfa2d092050ab7) |
+| 팀 최종 제출 | MCP 서버, 파일 변경 감시, 3단계 보안 분석 프로젝트 |
+| 개인 확장 | Semgrep·도구 설정, Windows wrapper, 공통 Finding JSON, UI/빌드 테스트 및 아키텍처 기록 |
+| 현재 검증 범위 | 로컬 fixture·단위 테스트와 빌드 성공. 실제 LLM·PoC 종단 간 성능은 미검증 |
 
-이 표는 변경 이력을 설명하며, 커밋 작성자 정보만으로 원본 코드 전체의 저작·담당 범위를 확대하지 않습니다. 원본 팀의 세부 역할 분담과 개인 확장 작업은 구분합니다.
+**기술:** Python · FastAPI · FastMCP(팀 제출) · Semgrep · React · Electron · SonarQube/SBOM(선택 경로)
 
-## 검증과 한계
+[팀 최종본](https://github.com/vmfmgl0607/VSH/tree/MVP-final) · [개인 코드·변경 이력](https://github.com/rasasoe/VSH/commits/main/) · [영어 소개](README.en.md)
 
-2026-09-16 재검증: **전체 unit 테스트 81개 통과**, **역순 실행 81개 통과**, **React production build 통과**. 실제 fixture 분석 화면에서 집계·설명·미검증 표시도 확인했습니다.
-
-- 이전 15개 실패와 1개 skip의 원인·수정 방법, 테스트 범위는 [검증 기록](docs/portfolio-verification.md)에 공개합니다.
-- API 키 없는 mock 설명은 실제 LLM 품질 평가가 아닙니다.
-- 기본 분석 응답의 L3 값은 미검증 상태일 수 있습니다. 외부 검증은 선택적이며 백그라운드에서 실행됩니다.
-- 공통 Finding 출력은 구현되어 있지만 세 도구를 모으는 통합 대시보드는 아직 없습니다.
+---
 
 <details>
-<summary>기술 문서 목차 펼치기</summary>
+<summary><strong>상세 설계·설치·API·실험 기록 펼쳐보기</strong></summary>
 
 ## Table of Contents
 
@@ -755,3 +732,6 @@ gantt
 개발자가 로컬에서 바로 실행하고 이해할 수 있는 보안 분석 플랫폼을 지향합니다.
 
 </div>
+
+
+</details>
