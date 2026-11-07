@@ -1,21 +1,11 @@
+<p align="center"><img src="docs/assets/portfolio-banner.svg" width="100%" alt="VSH — Application Security"></p>
+
 # VSH — Application Security Analysis
 
 <div align="center">
   <sub>🌐 README language · <a href="README.md">🇰🇷 한국어</a> · <strong>🇺🇸 English</strong></sub>
 </div>
 
-
-<div align="center">
-
-<a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white"/></a>
-<img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white"/>
-<img alt="Electron" src="https://img.shields.io/badge/Electron-47848F?logo=electron&logoColor=white"/>
-<img alt="Focus" src="https://img.shields.io/badge/Focus-Application%20Security-334155"/>
-<img alt="Status" src="https://img.shields.io/badge/Status-Prototype-E7AA42"/>
-
-**Source code and dependency findings, explained and reviewed through a desktop-oriented AppSec workflow.**
-
-</div>
 
 > **Attribution:** VSH is a fork of [vmfmgl0607/VSH](https://github.com/vmfmgl0607/VSH), extended with Semgrep/tool configuration integration, a versioned Finding export format, documentation, and validation. The upstream project is **not** claimed as entirely original work.
 
@@ -27,6 +17,23 @@ The objective was not to replace established commercial static analyzers, but to
 
 - **Evidence:** 81 unit tests passed, 81 passed again in reverse order, and the React production build and local fixture UI were validated (September 16, 2026).
 - **Not verified:** Real LLM reasoning quality, end-to-end L3 exploitability validation, or detection accuracy in production. Mock responses are not presented as real security findings.
+
+## Three-layer AppSec workflow
+
+VSH targets a developer-facing **L1 static detection → L2 LLM explanation → optional L3 proof-of-concept (PoC) generation and verification** workflow.
+
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/assets/vsh-workflow-mobile.svg">
+  <img src="docs/assets/vsh-workflow.svg" width="100%" alt="VSH three-stage AppSec workflow including LLM explanation and optional PoC validation">
+</picture>
+
+| Layer | Responsibility | Verified boundary |
+| --- | --- | --- |
+| **L1 — Detection** | Static analysis of code and dependencies through Semgrep and auxiliary rules | Real Semgrep execution integration and local fixture tests |
+| **L2 — LLM explanation** | Explain risk, attack scenarios, and remediation using LLM/RAG context | Provider architecture is present; public demo explanations use mocks |
+| **L3 — PoC generation and verification** | Optional PoC templates/generation path and controlled validation, supplemented by SonarQube/SBOM signals | End-to-end real PoC generation and execution remain unverified |
+
+LLM explanations alone are not proof of exploitability, and unverified findings remain marked as candidates.
 
 ## Demo
 
