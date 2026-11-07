@@ -19,6 +19,15 @@
 
 > **Attribution:** VSH is a fork of [vmfmgl0607/VSH](https://github.com/vmfmgl0607/VSH), extended with Semgrep/tool configuration integration, a versioned Finding export format, documentation, and validation. The upstream project is **not** claimed as entirely original work.
 
+## What I intended to verify
+
+**Documented work and verification activity:** February–September 2026 (not a verified full project start/end period).
+
+The objective was not to replace established commercial static analyzers, but to verify whether **real Semgrep execution, normalized findings, UI review, and versioned JSON exports** could form a reproducible developer-facing security workflow.
+
+- **Evidence:** 81 unit tests passed, 81 passed again in reverse order, and the React production build and local fixture UI were validated (September 16, 2026).
+- **Not verified:** Real LLM reasoning quality, end-to-end L3 exploitability validation, or detection accuracy in production. Mock responses are not presented as real security findings.
+
 ## Demo
 
 ![VSH local fixture demo](docs/assets/vsh-local-demo.png)
