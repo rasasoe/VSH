@@ -1,28 +1,20 @@
-<p align="center"><img src="docs/assets/portfolio-banner.svg" width="100%" alt="VSH — Application Security"></p>
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/assets/portfolio-banner-mobile.svg">
+  <img src="docs/assets/portfolio-banner.svg" width="100%" alt="VSH — Vibe Coding Secure Helper">
+</picture>
 
-# VSH — Application Security Analysis
+<p align="right"><a href="README.md">한국어</a> / <strong>English</strong></p>
 
-<div align="center">
-  <sub>🌐 README language · <a href="README.md">🇰🇷 한국어</a> · <strong>🇺🇸 English</strong></sub>
-</div>
+# VSH — Vibe Coding Secure Helper
 
+**MCP-enabled application security assistant · L1 Detection · L2 LLM Explanation · L3 PoC Validation**  
+**Team submission:** February 2026 · **Individual fork improvements:** September 2026
 
-> **Attribution:** VSH is a fork of [vmfmgl0607/VSH](https://github.com/vmfmgl0607/VSH), extended with Semgrep/tool configuration integration, a versioned Finding export format, documentation, and validation. The upstream project is **not** claimed as entirely original work.
+## The idea
 
-## Why we built VSH
+As AI-assisted vibe coding accelerates development, insecure code can be introduced just as quickly. VSH asks whether security findings could be surfaced **while a developer edits or saves code**, then explained and accompanied by suggested fixes without breaking the development workflow.
 
-**VSH (Vibe Coding Secure Helper)** began with a practical question: as AI-assisted vibe coding accelerates development, **could security issues be surfaced and explained as the developer writes and saves code, with actionable fixes suggested immediately?**
-
-The project is an **MCP-enabled application security assistant**. File-change detection, L1 static scanning, L2 LLM explanations and suggested fixes, and optional L3 PoC-oriented validation form its analysis pipeline. MCP is the interface to AI coding tools; the desktop app in this fork is a separate presentation layer.
-
-**Team submission:** February 2026 · **Individual fork enhancements/retesting:** September 2026 (original project start date not confirmed).
-
-**Two deliverables:** The [team's final MVP-final branch](https://github.com/vmfmgl0607/VSH/tree/MVP-final) contains a FastMCP server and file-watching demo. This fork focuses on further Semgrep/tool integration, React/Electron UI, normalized Finding JSON exports and tests.
-
-**Limitations:** The final team watcher is configured for the `vuln_sample.py` demo file, not arbitrary projects. Its MCP `apply_fix` tool returns proposed code and marks the issue accepted; it does not automatically rewrite the source file.
-
-- **Evidence:** 81 unit tests passed, 81 passed again in reverse order, and the React production build and local fixture UI were validated (September 16, 2026).
-- **Not verified:** Real LLM reasoning quality, end-to-end L3 exploitability validation, or detection accuracy in production. Mock responses are not presented as real security findings.
+The [team's final MVP-final branch](https://github.com/vmfmgl0607/VSH/tree/MVP-final) contains FastMCP tools and a file-change watcher demo. This personal fork extends Semgrep/tool configuration, Windows wrappers, versioned Finding JSON exports, the React/Electron presentation and tests. Team deliverables are not claimed as individual work.
 
 ## Three-layer AppSec workflow
 
@@ -41,7 +33,12 @@ VSH targets a developer-facing **L1 static detection → L2 LLM explanation → 
 
 LLM explanations alone are not proof of exploitability, and unverified findings remain marked as candidates.
 
-## Demo
+## Demo and verification
+
+<p align="center"><img src="docs/assets/vsh-local-demo.png" width="100%" alt="VSH local security analysis and finding display"></p>
+
+**Verified locally:** 81 tests and 81 reverse-order tests, plus a React production build (September 16, 2026). The team watcher targets a specific example file; MCP `apply_fix` returns proposed code but does not modify the source file. L2 public demo responses use mocks, and real L3 PoC execution remains unverified.
+
 
 ![VSH local fixture demo](docs/assets/vsh-local-demo.png)
 
