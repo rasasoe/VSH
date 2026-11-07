@@ -9,11 +9,17 @@
 
 > **Attribution:** VSH is a fork of [vmfmgl0607/VSH](https://github.com/vmfmgl0607/VSH), extended with Semgrep/tool configuration integration, a versioned Finding export format, documentation, and validation. The upstream project is **not** claimed as entirely original work.
 
-## What I intended to verify
+## Why we built VSH
 
-**Documented work and verification activity:** February–September 2026 (not a verified full project start/end period).
+**VSH (Vibe Coding Secure Helper)** began with a practical question: as AI-assisted vibe coding accelerates development, **could security issues be surfaced and explained as the developer writes and saves code, with actionable fixes suggested immediately?**
 
-The objective was not to replace established commercial static analyzers, but to verify whether **real Semgrep execution, normalized findings, UI review, and versioned JSON exports** could form a reproducible developer-facing security workflow.
+The project is an **MCP-enabled application security assistant**. File-change detection, L1 static scanning, L2 LLM explanations and suggested fixes, and optional L3 PoC-oriented validation form its analysis pipeline. MCP is the interface to AI coding tools; the desktop app in this fork is a separate presentation layer.
+
+**Team submission:** February 2026 · **Individual fork enhancements/retesting:** September 2026 (original project start date not confirmed).
+
+**Two deliverables:** The [team's final MVP-final branch](https://github.com/vmfmgl0607/VSH/tree/MVP-final) contains a FastMCP server and file-watching demo. This fork focuses on further Semgrep/tool integration, React/Electron UI, normalized Finding JSON exports and tests.
+
+**Limitations:** The final team watcher is configured for the `vuln_sample.py` demo file, not arbitrary projects. Its MCP `apply_fix` tool returns proposed code and marks the issue accepted; it does not automatically rewrite the source file.
 
 - **Evidence:** 81 unit tests passed, 81 passed again in reverse order, and the React production build and local fixture UI were validated (September 16, 2026).
 - **Not verified:** Real LLM reasoning quality, end-to-end L3 exploitability validation, or detection accuracy in production. Mock responses are not presented as real security findings.
