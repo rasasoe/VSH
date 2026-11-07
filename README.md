@@ -76,8 +76,6 @@
 - [16. Current Limitations](#16-current-limitations)
 - [17. Roadmap](#17-roadmap)
 
-</details>
-
 ---
 
 ## 1. What is VSH?
