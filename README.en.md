@@ -46,17 +46,17 @@ LLM explanations alone are not proof of exploitability, and unverified findings 
 | Layer | Role | Scope |
 | --- | --- | --- |
 | L1 — Static findings | Source/dependency checks, including Semgrep integration | Findings are candidates for review |
-| L2 — Reasoning | Explanations and remediation-oriented context | Mock/LLM modes; not all demo output uses a live LLM |
-| L3 — Extended verification | Optional SonarQube, SBOM and deeper validation paths | Not part of the fixture demo |
+| L2 — LLM explanations | Model/RAG-based risk rationale, attack scenarios, and remediation | Public fixture demo uses mock reasoning; real LLM quality is unverified |
+| L3 — PoC generation & verification | Optional PoC templates and controlled validation, with SonarQube/SBOM supporting evidence | Real end-to-end PoC execution is not yet verified |
 | Desktop and API | React/Electron front end, FastAPI runtime | Local prototyping |
 | Finding v1.0 | Versioned output for downstream tools | Implemented; integrated dashboard is not yet available |
 
 ```mermaid
 flowchart LR
   SRC["Source / Dependencies"] --> STATIC["L1: Static Checks"]
-  STATIC --> REASON["L2: Reasoning / Annotation"]
+  STATIC --> REASON["L2: LLM Explanation / Annotation"]
   REASON --> OUT["Findings + Remediation"]
-  STATIC -.-> VERIFY["Optional L3 Verification"]
+  STATIC -.-> VERIFY["Optional L3 PoC Generation + Validation"]
   VERIFY -.-> OUT
   OUT --> UI["React / Electron UI"]
 ```
