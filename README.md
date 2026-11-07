@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/assets/portfolio-banner.svg" width="100%" alt="VSH — Application Security"></p>
+
 # VSH
 
 <p align="center"><b>🌐 Language</b> &nbsp; <strong>🇰🇷 한국어</strong> &nbsp; | &nbsp; <a href="README.en.md">🇺🇸 English</a></p>
@@ -6,6 +8,23 @@
 > **Upstream 기반 fork · 개인 확장 기록 공개**  
 > 원본: [vmfmgl0607/VSH](https://github.com/vmfmgl0607/VSH). 이 fork에서 **Semgrep·도구 설정 연동, Finding v1.0 export, 검증·아키텍처 문서**를 확장했습니다. 아래 기여 표에서 실제 변경 파일과 커밋을 확인할 수 있습니다.
 
+## 3단계 분석 설계
+
+VSH는 단순 정적 분석기가 아니라 **L1 탐지 → L2 LLM 기반 설명 → 선택적 L3 PoC 생성·검증 → 결과 보고**까지 연결하는 AppSec 프로토타입을 목표로 개발되었습니다.
+
+<picture>
+  <source media="(max-width: 600px)" srcset="docs/assets/vsh-workflow-mobile.svg">
+  <img src="docs/assets/vsh-workflow.svg" width="100%" alt="VSH L1 정적 분석, L2 LLM 설명, L3 PoC 생성 및 검증 흐름">
+</picture>
+
+| 계층 | 역할 | 확인된 상태 |
+| --- | --- | --- |
+| **L1 — 취약점 탐지** | Semgrep·규칙·구조 분석으로 코드/의존성 취약점 후보를 식별 | Semgrep 실행 경로 및 로컬 fixture 테스트 확인 |
+| **L2 — LLM 설명** | LLM 및 RAG 문맥으로 위험 근거, 공격 시나리오, 수정 방안 설명 | Provider 연동 구조 존재. 공개 데모에서는 mock 설명 사용 |
+| **L3 — PoC 생성 및 검증** | PoC 템플릿·생성 경로와 격리된 재현 검증; SonarQube·SBOM 정보로 보강 | 선택형 확장 구조. 실제 PoC 생성·실행의 종단 간 성공은 미검증 |
+
+**해석 기준:** L2의 설명은 취약점의 실제 악용 가능성을 증명하지 않습니다. L3 검증 결과가 없는 탐지 후보를 확정된 취약점으로 표현하지 않습니다.
+
 ## 검증 목적과 확인된 결과
 
 **확인된 작업·검증 기록:** 2026.02–2026.09 (프로젝트 전체 착수·종료 기간은 미확인)
@@ -13,7 +32,7 @@
 기존 정적 분석 도구를 새로 만드는 것보다, **탐지 결과가 개발자가 다시 확인하고 수정할 수 있는 근거로 전달되는가**를 검증하고자 했습니다. 특히 실제 Semgrep 실행 경로, 사용자 인터페이스 표시, 공통 Finding JSON 출력을 연결하는 것이 목표였습니다.
 
 - **검증 근거:** 2026-09-16 기준 단위 테스트 81개 및 역순 실행 81개 통과, React 빌드 및 로컬 fixture 분석 UI 확인
-- **남은 검증:** 실제 LLM 설명의 정확도, L3 종단 간 검증, 실환경의 오탐·미탐 측정. mock 데이터와 탐지 후보를 실제 검증 결과로 표현하지 않습니다.
+- **남은 검증:** 실제 LLM 설명의 정확도, L3 PoC 생성·실행 종단 간 검증, 실환경의 오탐·미탐 측정. mock 데이터와 탐지 후보를 실제 검증 결과로 표현하지 않습니다.
 
 ## 한눈에 보기
 
@@ -157,7 +176,7 @@ flowchart LR
 
     L3 --> Sonar[SonarQube]
     L3 --> Syft[Syft SBOM]
-    L3 --> PoC[PoC Templates]
+    L3 --> PoC[PoC Generation / Templates]
 
     Engine --> RuntimeDB[(SQLite / Chroma Runtime DB)]
 ```
@@ -241,9 +260,9 @@ L1 구성 요소:
 - `import_risk` 기반 typosquatting / 공급망 신호
 - SBOM package record 생성 경로
 
-### L2. Reasoning
+### L2. LLM 기반 설명 (Reasoning)
 
-L2는 L1의 탐지 결과를 사용자에게 설명 가능한 형태로 보강합니다.
+L2는 LLM 및 선택적 RAG를 통해 탐지 결과의 위험 근거, 공격 시나리오와 수정 방향을 사람이 이해할 수 있는 설명으로 보강합니다. API 키가 없는 공개 시연은 `mock` provider를 사용하므로 실제 LLM 설명의 정확도까지 검증된 것은 아닙니다.
 
 | Field | Meaning |
 |---|---|
@@ -255,9 +274,9 @@ L2는 L1의 탐지 결과를 사용자에게 설명 가능한 형태로 보강�
 
 LLM API 키가 없어도 `mock` provider로 기본 데모가 가능합니다.
 
-### L3. Verification
+### L3. PoC 생성 및 검증 (Optional Verification)
 
-L3는 선택형 심화 검증 계층입니다.
+L3는 탐지된 취약점 후보에 대해 **PoC 템플릿을 활용하거나 재현용 PoC 생성 경로를 확장하고, 격리된 환경에서 성공 여부를 확인하는 검증 계층**을 목표로 합니다. SonarQube와 Syft SBOM은 별도의 정적·구성 근거로 보강합니다. **현재 실제 PoC 생성·실행의 종단 간 성공 사례는 확인되지 않았습니다.**
 
 ```mermaid
 flowchart LR
@@ -274,7 +293,7 @@ flowchart LR
 
 - 로컬 SonarQube Docker 서버
 - Syft 기반 SBOM
-- CWE별 PoC template 확장 구조
+- CWE별 PoC 생성·템플릿 확장 구조(실제 PoC 생성·실행 종단 간 검증은 미완료)
 
 ---
 
