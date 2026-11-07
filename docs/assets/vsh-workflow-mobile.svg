@@ -7,7 +7,7 @@
 <text x="22" y="41" font-size="30" font-weight="700" fill="#1C1D1F">VSH</text>
 <text x="94" y="41" font-size="15" fill="#4D5254">APPLICATION SECURITY</text>
 <path d="M22 59H418" stroke="#8D9294"/>
-<text x="22" y="86" font-size="17" fill="#505559">INPUT / Source code + dependencies</text>
+<text x="22" y="86" font-size="17" fill="#505559">FILE SAVE / MCP TOOL INPUT</text>
 <g>
 <rect x="22" y="107" width="396" height="123" fill="#FFFFFF" stroke="#A8ADAF" stroke-width="1.4"/>
 <rect x="22" y="270" width="396" height="123" fill="#FFFFFF" stroke="#A8ADAF" stroke-width="1.4"/>
@@ -29,7 +29,7 @@
 </g>
 <path d="M22 608H418" stroke="#A8ADAF"/>
 <text x="22" y="640" font-size="21" font-weight="700" fill="#141618">OUTPUT / Findings and reports</text>
-<text x="22" y="671" font-size="16" fill="#54595C">L2 may use mock data in local demos.</text>
+<text x="22" y="671" font-size="16" fill="#54595C">L2 local demo uses mock explanations.</text>
 <text x="22" y="694" font-size="16" fill="#54595C">L3 remains optional and partly unverified.</text>
 </g>
 </svg>
